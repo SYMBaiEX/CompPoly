@@ -36,7 +36,7 @@ theorem monomial_toPoly [DecidableEq R] [LawfulBEq R] (n : ℕ) (c : R) :
 theorem C_toPoly [BEq R] [LawfulBEq R] (r : R) : (C r).toPoly = Polynomial.C r := by
   convert Raw.toPoly_C r
   convert Raw.toPoly_trim
-  infer_instance
+  all_goals infer_instance
 
 /-- CPolynomial.X is correct wrt the Mathlib spec. -/
 theorem X_toPoly [BEq R] [LawfulBEq R] [Nontrivial R] :
@@ -57,7 +57,7 @@ theorem eval_C [BEq R] [LawfulBEq R] (a c : R) :
   rw [CPolynomial.eval_toPoly, CPolynomial.C_toPoly, Polynomial.eval_C]
 
 /-- Raw.eval₂ is correct wrt the Mathlib spec. -/
-theorem Raw.eval₂_toPoly {S : Type*} [Semiring S]
+theorem Raw.eval₂_toPoly [BEq R] [LawfulBEq R] {S : Type*} [Semiring S]
     (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
     p.eval₂ f x = p.toPoly.eval₂ f x := by
   unfold CompPoly.CPolynomial.Raw.toPoly
@@ -72,7 +72,7 @@ theorem Raw.eval₂_toPoly {S : Type*} [Semiring S]
     simp [Polynomial.eval₂_add, Polynomial.C_mul_X_pow_eq_monomial]
 
 /-- CPolynomial.eval₂ is correct wrt the Mathlib spec. -/
-theorem eval₂_toPoly {S : Type*} [Semiring S]
+theorem eval₂_toPoly [BEq R] [LawfulBEq R] {S : Type*} [Semiring S]
     (f : R →+* S) (x : S) (p : CPolynomial R) :
     eval₂ f x p = p.toPoly.eval₂ f x := by
   exact Raw.eval₂_toPoly f x p.val
@@ -109,12 +109,14 @@ theorem support_toPoly [BEq R] [LawfulBEq R] (p : CPolynomial R) :
     intro x
     convert Iff.rfl
     convert Raw.coeff_toPoly
-    exact Eq.symm Array.getD_eq_getD_getElem?
+    all_goals first
+      | infer_instance
+      | exact Eq.symm Array.getD_eq_getD_getElem?
   · simp +decide [ CPolynomial.support, Finset.ext_iff, Set.ext_iff ]
     grind
 
 /-- lemma: toImpl is natDegree's succ -/
-private lemma size_toImpl_eq_natDegree_succ {q : R[X]} (hq : q ≠ 0) :
+private lemma size_toImpl_eq_natDegree_succ [BEq R] [LawfulBEq R] {q : R[X]} (hq : q ≠ 0) :
     q.toImpl.size = q.natDegree + 1 := by
   rcases Raw.toImpl_elim q with ⟨hzero, _⟩ | ⟨_, himpl⟩
   · exact (hq hzero).elim

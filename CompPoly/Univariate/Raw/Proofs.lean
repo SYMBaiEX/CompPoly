@@ -5,6 +5,7 @@ Authors: Quang Dao, Gregor Mitscha-Baude, Derek Sorensen, Desmond Coles,
   Natalie Klaus, Dimitris Mitsios, Valerii Huhnin
 -/
 import CompPoly.Univariate.Raw.Division
+import CompPoly.Univariate.ToPoly.Raw
 
 /-!
 # Raw Univariate Polynomial Proofs
@@ -31,71 +32,12 @@ variable (p q r : CPolynomial.Raw R)
 
 lemma pow_zero (p : CPolynomial.Raw R) :
     p ^ 0 = C 1 := by
-  show pow p 0 = C 1
-  unfold pow
-  rfl
+      exact rfl
 
-/-- `powIterate` unfolds one step: `powIterate p (n+1) = p * powIterate p n`. -/
-lemma powIterate_succ (p : CPolynomial.Raw R) (n : ℕ) :
-    powIterate p (n + 1) = mul p (powIterate p n) :=
-  Function.iterate_succ_apply' (mul p) n (C 1)
-
-end Semiring
-
-section EvalBridge
-
-variable {R : Type*} [Semiring R]
-variable {S : Type*} [Semiring S]
-
-/-- Horner eval₂ on an empty array is zero. -/
-@[simp]
-lemma eval₂_empty (f : R →+* S) (x : S) :
-    eval₂ f x (#[] : CPolynomial.Raw R) = 0 := by
-  simp [eval₂]
-
-/-- Naive eval₂ on an empty array is zero. -/
-@[simp]
-lemma eval₂Naive_empty (f : R →+* S) (x : S) :
-    eval₂Naive f x (#[] : CPolynomial.Raw R) = 0 := by
-  simp [eval₂Naive]
-
-
-
-/-
-`eval₂` equals the Finset sum over `range p.size`.
--/
-theorem eval₂_eq_sum (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
-    eval₂ f x p =
-    (Finset.range p.size).sum (fun i ↦ f (p.coeff i) * x ^ i) := by
-  convert eval₂_eq_eval₂_naive f x p using 1
-  · unfold CPolynomial.Raw.eval₂Naive
-    induction p using Array.recOn
-    simp_all +decide
-    induction ‹List R› using List.reverseRecOn <;>
-      simp_all +decide [Finset.sum_range_succ]
-    simp_all +decide [Finset.sum_range, List.zipIdx_append]
-
-/-
-`eval₂` equals the list sum of mapped `zipIdx` pairs.
--/
-theorem eval₂_eq_list_sum (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
-    eval₂ f x p =
-    (p.zipIdx.toList.map (fun ⟨a, i⟩ ↦ f a * x ^ i)).sum := by
-  convert eval₂_eq_eval₂_naive f x p using 1
-  · unfold CPolynomial.Raw.eval₂Naive
-    induction p using Array.recOn
-    simp +decide [*]
-    induction' ‹List R› using List.reverseRecOn with _ _ ih <;>
-      simp +decide [*, List.zipIdx_append]
-
-end EvalBridge
-
-section Semiring
-
-variable {R : Type*} [Semiring R] [BEq R]
-variable {Q : Type*} [Semiring Q]
-variable {S : Type*}
-variable (p q r : CPolynomial.Raw R)
+lemma pow_succ (p : CPolynomial.Raw R) (n : ℕ) :
+    p ^ (n + 1) = p * (p ^ n) := by
+      convert ( Function.iterate_succ_apply' ( mul p ) n ( C 1 ) )
+           using 1
 
 section AddDefs
 
@@ -634,24 +576,11 @@ section MulInfrastructure
 section MulCoeffHelpers
 
 lemma equiv_mul_one [LawfulBEq R] (p : CPolynomial.Raw R) : Trim.equiv (p * 1) p := by
-  have h_mul_one : ∀ (p : CPolynomial.Raw R), (p * 1).coeff = p.coeff := by
-    intro p; funext i
-    rw [ show p * 1 = p * 1 from rfl ]
-    have mul_one_unwrap : ∀ (p : CPolynomial.Raw R), (p * 1).coeff = fun k =>
-      (p.zipIdx.map (fun ⟨a, i⟩ => ((smul a 1).mulPowX i).coeff k)).sum := by
-      intro p; funext k; exact (by
-      convert coeff_foldl_add
-          ( p.zipIdx.toList ) ( fun ⟨ a, i ⟩ => ( smul a 1 ).mulPowX i ) ( mk #[] ) k using 1
-      · have h_mul_def : ∀ (p : CPolynomial.Raw R), p * 1 =
-            (p.zipIdx.foldl (fun acc ⟨a, i⟩ => acc + (smul a 1).mulPowX i) (mk #[])) :=
-          fun p => mul_eq_foldl p 1
-        rw [h_mul_def, Array.foldl_toList]
-      · simp +decide
-        conv => rw [ ← Array.toList_zipIdx ]
-        conv => rw [ ← Array.toList_map ]
-        exact Eq.symm Array.sum_toList)
-    exact (by exact mul_one_unwrap p ▸ coeff_sum p i ▸ rfl)
-  exact congrFun (h_mul_one p)
+  intro k
+  rw [coeff_mul]
+  rw [← Array.toList_map]
+  rw [Array.sum_eq_sum_toList]
+  exact coeff_sum p k
 
 theorem mul_is_trimmed [LawfulBEq R] (p q : CPolynomial.Raw R) : (p * q).trim = p * q := by
   show ((mulRaw p q).trim).trim = (mulRaw p q).trim
@@ -758,6 +687,18 @@ lemma mulX_monomial_one [DecidableEq R] [LawfulBEq R] [Nontrivial R] (n : ℕ) :
   exact Nat.recOn n (by simp +decide) fun n ih =>
     by simp +decide [ List.replicate ] at ih ⊢; tauto
 
+lemma X_pow_eq_monomial_one [DecidableEq R] [LawfulBEq R] [Nontrivial R] (n : ℕ) :
+    (X : CPolynomial.Raw R) ^ n = monomial n 1 := by
+  have h_monomial : ∀ n : ℕ,
+      (monomial n (1 : R)).trim =
+      monomial n (1 : R) := by
+    exact fun n => monomial_canonical n 1
+  induction' n with n ih;
+  · unfold X monomial
+    aesop
+  · rw [ pow_succ, ih ];
+    rw [ X_mul_eq_mulX_trim ];
+    rw [ mulX_monomial_one, h_monomial ]
 
 lemma smul_monomial_one_trim [DecidableEq R] [LawfulBEq R]
     [Nontrivial R] (n : ℕ) (r : R) :
@@ -1090,42 +1031,6 @@ theorem eval₂Horner_eq_eval₂
     simpa using this.symm
 
 end EvalTheorems
-
-section PowTheorems
-
-variable [LawfulBEq R]
-
-lemma pow_succ (p : CPolynomial.Raw R) (n : ℕ) :
-    p ^ (n + 1) = p * (p ^ n) := rfl
-
-lemma pow_mul_comm (p : CPolynomial.Raw R) : ∀ n : ℕ,
-    p * (p ^ n) = p ^ n * p
-  | 0 => by
-    show mul p (pow p 0) = mul (pow p 0) p
-    rw [mul_one_trim, one_mul_trim]
-  | n + 1 => by
-    have ih := pow_mul_comm p n
-    calc p * p ^ (n + 1) = p * (p * p ^ n) := rfl
-      _ = p * (p ^ n * p) := by rw [ih]
-      _ = (p * p ^ n) * p := by rw [Raw.mul_assoc]
-
-/-- `p ^ (n + 1) = p ^ n * p` under `LawfulBEq`. -/
-lemma pow_succ_right (p : CPolynomial.Raw R) (n : ℕ) :
-    p ^ (n + 1) = p ^ n * p := by
-  rw [pow_succ]
-  exact pow_mul_comm p n
-
-lemma X_pow_eq_monomial_one [DecidableEq R] [Nontrivial R] (n : ℕ) :
-    (X : CPolynomial.Raw R) ^ n = monomial n 1 := by
-  have h_monomial : ∀ n : ℕ,
-      (monomial n (1 : R)).trim =
-      monomial n (1 : R) := by
-    exact fun n => monomial_canonical n 1
-  induction' n with n ih;
-  · unfold X monomial; rfl
-  · rw [ pow_succ X n, ih, X_mul_eq_mulX_trim, mulX_monomial_one, h_monomial ]
-
-end PowTheorems
 
 end Semiring
 
@@ -1510,6 +1415,50 @@ termination_by n => n
 decreasing_by omega
 
 end RepeatedSquaring
+
+section EvalSum
+
+variable {R : Type*} [Semiring R] [BEq R] [LawfulBEq R]
+variable {S : Type*} [Semiring S]
+
+/-- `eval₂` equals the Finset sum over `range p.size`. -/
+theorem eval₂_eq_sum (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
+    eval₂ f x p =
+    (Finset.range p.size).sum (fun i ↦ f (p.coeff i) * x ^ i) := by
+  convert eval₂_eq_eval₂_naive f x p using 1
+  · unfold CPolynomial.Raw.eval₂Naive
+    induction p using Array.recOn
+    simp_all +decide
+    induction ‹List R› using List.reverseRecOn <;>
+      simp_all +decide [Finset.sum_range_succ]
+    simp_all +decide [Finset.sum_range, List.zipIdx_append]
+
+end EvalSum
+
+section PowSuccRight
+
+variable {R : Type*} [Semiring R] [BEq R]
+
+lemma pow_mul_comm [LawfulBEq R] (p : CPolynomial.Raw R) : ∀ n : ℕ,
+    p * (p ^ n) = p ^ n * p
+  | 0 => by
+    rw [pow_zero]
+    show p * (1 : CPolynomial.Raw R) = (1 : CPolynomial.Raw R) * p
+    rw [mul_one_trim, one_mul_trim]
+  | n + 1 => by
+    have ih := pow_mul_comm p n
+    calc p * p ^ (n + 1) = p * (p * p ^ n) := by rw [pow_succ]
+      _ = p * (p ^ n * p) := by rw [ih]
+      _ = (p * p ^ n) * p := by rw [Raw.mul_assoc]
+      _ = p ^ (n + 1) * p := by rw [← pow_succ]
+
+/-- `p ^ (n + 1) = p ^ n * p` under `LawfulBEq`. -/
+lemma pow_succ_right [LawfulBEq R] (p : CPolynomial.Raw R) (n : ℕ) :
+    p ^ (n + 1) = p ^ n * p := by
+  rw [pow_succ]
+  exact pow_mul_comm p n
+
+end PowSuccRight
 
 end CPolynomial.Raw
 

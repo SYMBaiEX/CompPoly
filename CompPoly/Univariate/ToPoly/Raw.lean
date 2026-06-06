@@ -45,18 +45,11 @@ private lemma horner_eq_naive_list (f : R →+* S) (x : S) :
     induction a <;> simp +decide [*, pow_succ, mul_assoc, add_mul, add_assoc]
 
 /-
-The Horner backend agrees with the naive sum-of-powers backend.
+The default backend agrees with the naive sum-of-powers backend
+(they share the same sum-of-powers fold definitionally).
 -/
 theorem eval₂_eq_eval₂_naive (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
-    eval₂ f x p = eval₂Naive f x p := by
-  convert horner_eq_naive_list f x p.toList using 1
-  · unfold eval₂
-    aesop
-  · unfold CPolynomial.Raw.eval₂Naive
-    induction p using Array.recOn
-    simp +decide [*]
-    induction ‹List R› using List.reverseRecOn <;>
-      simp +decide [*, List.zipIdx_append]
+    eval₂ f x p = eval₂Naive f x p := rfl
 
 /-- Convert a `CPolynomial.Raw` to a (mathlib) `Polynomial`. -/
 noncomputable def toPoly (p : CPolynomial.Raw R) : Polynomial R :=
@@ -148,11 +141,56 @@ lemma toPoly_trim [LawfulBEq R] {p : CPolynomial.Raw R} : p.trim.toPoly = p.toPo
   ext n
   rw [coeff_toPoly, coeff_toPoly, Trim.coeff_eq_coeff]
 
+section AddCoeffHelpers
+
+/- Self-contained copies of the `addRaw` size/coefficient facts (also proved in
+`CompPoly.Univariate.Raw.Proofs`, which this file cannot import without creating
+an import cycle through `Raw.Division`). -/
+
+private lemma matchSize_size_eq_aux {p q : CPolynomial.Raw Q} :
+    let (p', q') := Array.matchSize p q 0
+    p'.size = q'.size := by
+  change (Array.rightpad _ _ _).size = (Array.rightpad _ _ _).size
+  rw [Array.size_rightpad, Array.size_rightpad]
+  omega
+
+private lemma matchSize_size_aux {p q : CPolynomial.Raw Q} :
+    let (p', _) := Array.matchSize p q 0
+    p'.size = max p.size q.size := by
+  change (Array.rightpad _ _ _).size = max (Array.size _) (Array.size _)
+  rw [Array.size_rightpad]
+  omega
+
+private lemma zipWith_size_aux {R} {f : R → R → R} {a b : Array R} (h : a.size = b.size) :
+    (Array.zipWith f a b).size = a.size := by
+  simp; omega
+
+private theorem add_size_aux {p q : CPolynomial.Raw Q} :
+    (addRaw p q).size = max p.size q.size := by
+  change (Array.zipWith _ _ _ ).size = max p.size q.size
+  rw [zipWith_size_aux matchSize_size_eq_aux, matchSize_size_aux]
+
+private theorem add_coeff_aux {p q : CPolynomial.Raw Q} {i : ℕ} (hi : i < (addRaw p q).size) :
+    (addRaw p q)[i] = p.coeff i + q.coeff i := by
+  simp [addRaw]
+  by_cases hi' : i < p.size <;> by_cases hi'' : i < q.size <;> simp_all
+
+private theorem addRaw_coeff_aux (p q : CPolynomial.Raw Q) (i : ℕ) :
+    (addRaw p q).coeff i = p.coeff i + q.coeff i := by
+  rcases (Nat.lt_or_ge i (addRaw p q).size) with h_lt | h_ge
+  · rw [← add_coeff_aux h_lt]; simp [h_lt]
+  have h_lt' : i ≥ max p.size q.size := by rwa [← add_size_aux]
+  have h_p : i ≥ p.size := by omega
+  have h_q : i ≥ q.size := by omega
+  simp [h_ge, h_p, h_q]
+
+end AddCoeffHelpers
+
 /-- `toPoly` preserves addition. -/
 @[grind =]
 theorem toPoly_addRaw {p q : CPolynomial.Raw Q} : (addRaw p q).toPoly = p.toPoly + q.toPoly := by
   ext n
-  rw [Polynomial.coeff_add, coeff_toPoly, coeff_toPoly, coeff_toPoly, add_coeff?]
+  rw [Polynomial.coeff_add, coeff_toPoly, coeff_toPoly, coeff_toPoly, addRaw_coeff_aux]
 
 /-- `toPoly` of a right-scalar multiplication is multiplication by `Polynomial.C r` on the right. -/
 @[grind =]
@@ -186,7 +224,6 @@ lemma getLast_toImpl {p : Q[X]} (hp : p ≠ 0) : let h : p.toImpl.size > 0 := to
   · contradiction
   simp [h]
 
-omit [BEq R] in
 /-- `toImpl` lands in the semantic canonical carrier used by `CPolynomial`. -/
 @[simp]
 theorem isCanonical_toImpl (p : R[X]) : IsCanonical p.toImpl := by
@@ -208,8 +245,10 @@ theorem trim_toImpl [LawfulBEq R] (p : R[X]) : p.toImpl.trim = p.toImpl := by
 theorem Raw.toImpl_toPoly [LawfulBEq R] (p : CPolynomial.Raw R) : p.toPoly.toImpl = p.trim := by
   have h_inj : ∀ a b : CPolynomial.Raw R, IsCanonical a → IsCanonical b → a.toPoly = b.toPoly → a = b := by
     intro a b ha hb hab
-    ext i
-    rw [← coeff_toPoly, hab, coeff_toPoly]
+    apply Trim.isCanonical_ext ha hb
+    intro i
+    rw [← coeff_toPoly, ← coeff_toPoly]
+    exact congrArg (fun p => p.coeff i) hab
   have h_canonical_toImpl := isCanonical_toImpl p.toPoly
   have h_canonical_trim := Trim.isCanonical_trim p
   have h_eq : p.toPoly = p.toPoly.toImpl.toPoly := by rw [toPoly_toImpl]
@@ -239,7 +278,7 @@ theorem eval_toImpl_eq_eval [LawfulBEq R] (x : R) (p : R[X]) : p.toImpl.eval x =
 
 /-- Evaluation is unchanged by trimming. -/
 @[simp, grind =]
-lemma Raw.eval_trim_eq_eval [LawfulBEq R] (x : R) (p : CPolynomial.Raw R) :
+lemma eval_trim_eq_eval [LawfulBEq R] (x : R) (p : CPolynomial.Raw R) :
     p.trim.eval x = p.eval x := by
   rw [← Raw.toImpl_toPoly, eval_toImpl_eq_eval, eval_toPoly_eq_eval]
 

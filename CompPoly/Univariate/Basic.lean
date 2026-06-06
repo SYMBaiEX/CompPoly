@@ -1174,6 +1174,70 @@ instance [Semiring R] [BEq R] [LawfulBEq R] : Module R (CPolynomial R) where
   add_smul := add_smul
   zero_smul := zero_smul
 
+section Division
+
+/-- Quotient of `p` by a monic polynomial `q`. Matches Mathlib's `Polynomial.divByMonic`. -/
+def divByMonic [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R] (p q : CPolynomial R) :
+    CPolynomial R :=
+  ⟨Raw.divByMonic p.val q.val,
+   Trim.isCanonical_of_trim_eq (Raw.divByMonic_canonical p.val q.val)⟩
+
+/-- Remainder of `p` modulo a monic polynomial `q`. Matches Mathlib's `Polynomial.modByMonic`. -/
+def modByMonic [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R] (p q : CPolynomial R) :
+    CPolynomial R :=
+  ⟨Raw.modByMonic p.val q.val,
+   Trim.isCanonical_of_trim_eq
+     (Raw.modByMonic_canonical (Trim.trim_eq_of_isCanonical p.property) q.val)⟩
+
+/-- Remainder of `p` modulo a monic polynomial `q`, using a remainder-only implementation. -/
+def modByMonicRemainderOnly [Field R] [BEq R] [LawfulBEq R]
+    (p q : CPolynomial R) : CPolynomial R :=
+  ⟨Raw.modByMonicRemainderOnly p.val q.val,
+   Trim.isCanonical_of_trim_eq
+     (Raw.modByMonicRemainderOnly_canonical (Trim.trim_eq_of_isCanonical p.property) q.val)⟩
+
+/-- Remainder of `p` modulo a monic polynomial `q`, using reversal and low products. -/
+def modByMonicByReversal [Field R] [BEq R] [LawfulBEq R]
+    (M : Raw.MulLowContext R) (p q : CPolynomial R) : CPolynomial R :=
+  ⟨Raw.modByMonicByReversal M p.val q.val,
+   Trim.isCanonical_of_trim_eq
+     (Raw.modByMonicByReversal_canonical M (Trim.trim_eq_of_isCanonical p.property) q.val)⟩
+
+/-- The remainder-only monic remainder agrees with the canonical monic remainder. -/
+theorem modByMonicRemainderOnly_eq_modByMonic [Field R] [BEq R] [LawfulBEq R]
+    (p q : CPolynomial R) : modByMonicRemainderOnly p q = modByMonic p q := by
+  apply CPolynomial.ext
+  simp [modByMonicRemainderOnly, modByMonic, Raw.modByMonicRemainderOnly_eq_modByMonic]
+
+/-- Quotient of `p` by `q` (when `R` is a field). -/
+def div [Field R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) : CPolynomial R :=
+  ⟨Raw.div p.val q.val, Trim.isCanonical_of_trim_eq (Raw.div_canonical p.val q.val)⟩
+
+/-- Any `CPolynomial` divided by the zero polynomial gives the zero
+polynomial. -/
+@[simp]
+theorem div_zero [Field R] [BEq R] [LawfulBEq R] (p : CPolynomial R) : p.div 0 = 0 := by
+  apply Subtype.ext; show Raw.div p.val 0 = 0; unfold Raw.div
+  rw [Raw.mul_zero, Raw.leadingCoeff_zero, inv_zero]
+  rw [smul_eq_mul, Raw.C_mul_eq_smul_trim, Raw.smul_zero_trim]; rfl
+
+/-- Remainder of `p` modulo `q` (when `R` is a field). -/
+def mod [Field R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) : CPolynomial R :=
+  ⟨Raw.mod p.val q.val, Trim.isCanonical_of_trim_eq (Raw.mod_canonical p.val q.val)⟩
+
+/-- Any `CPolynomial` modulo the zero polynomial gives the zero
+polynomial. -/
+@[simp]
+theorem mod_zero [Field R] [BEq R] [LawfulBEq R] (p : CPolynomial R) : p.mod 0 = 0 := by
+  apply Subtype.ext; show Raw.mod p.val 0 = 0; unfold Raw.mod
+  rw [Raw.mul_zero, Raw.leadingCoeff_zero, inv_zero]
+  rw [smul_eq_mul, Raw.C_mul_eq_smul_trim, Raw.smul_zero_trim]; rfl
+
+instance [Field R] [BEq R] [LawfulBEq R] : Div (CPolynomial R) := ⟨div⟩
+instance [Field R] [BEq R] [LawfulBEq R] : Mod (CPolynomial R) := ⟨mod⟩
+
+end Division
+
 /-- Equality between `div` and `divByMonic` for `CPolynomial R` -/
 theorem div_eq_divByMonic [Field R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) :
     p.div q =
