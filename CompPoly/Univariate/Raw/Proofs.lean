@@ -5,6 +5,7 @@ Authors: Quang Dao, Gregor Mitscha-Baude, Derek Sorensen, Desmond Coles,
   Natalie Klaus, Dimitris Mitsios, Valerii Huhnin
 -/
 import CompPoly.Univariate.Raw.Division
+import CompPoly.Univariate.ToPoly.Raw
 
 /-!
 # Raw Univariate Polynomial Proofs
@@ -31,71 +32,12 @@ variable (p q r : CPolynomial.Raw R)
 
 lemma pow_zero (p : CPolynomial.Raw R) :
     p ^ 0 = C 1 := by
-  show pow p 0 = C 1
-  unfold pow
-  rfl
+      exact rfl
 
-/-- `pow` unfolds one step: `p ^ (n+1) = p * (p ^ n)`. -/
-lemma powIterate_succ (p : CPolynomial.Raw R) (n : ℕ) :
-    pow p (n + 1) = mul p (pow p n) :=
+/-- The iterate-based raw power definition unfolds one step on the left. -/
+lemma pow_succ (p : CPolynomial.Raw R) (n : ℕ) :
+    p ^ (n + 1) = p * (p ^ n) :=
   Function.iterate_succ_apply' (mul p) n (C 1)
-
-end Semiring
-
-section EvalBridge
-
-variable {R : Type*} [Semiring R]
-variable {S : Type*} [Semiring S]
-
-/-- Horner eval₂ on an empty array is zero. -/
-@[simp]
-lemma eval₂_empty (f : R →+* S) (x : S) :
-    eval₂ f x (#[] : CPolynomial.Raw R) = 0 := by
-  simp [eval₂]
-
-/-- Naive eval₂ on an empty array is zero. -/
-@[simp]
-lemma eval₂Naive_empty (f : R →+* S) (x : S) :
-    eval₂Naive f x (#[] : CPolynomial.Raw R) = 0 := by
-  simp [eval₂Naive]
-
-
-
-/-
-`eval₂` equals the Finset sum over `range p.size`.
--/
-theorem eval₂_eq_sum (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
-    eval₂ f x p =
-    (Finset.range p.size).sum (fun i ↦ f (p.coeff i) * x ^ i) := by
-  convert eval₂_eq_eval₂_naive f x p using 1
-  · unfold CPolynomial.Raw.eval₂Naive
-    induction p using Array.recOn
-    simp_all +decide
-    induction ‹List R› using List.reverseRecOn <;>
-      simp_all +decide [Finset.sum_range_succ]
-    simp_all +decide [Finset.sum_range, List.zipIdx_append]
-
-/-
-`eval₂` equals the list sum of mapped `zipIdx` pairs.
--/
-theorem eval₂_eq_list_sum (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
-    eval₂ f x p =
-    (p.zipIdx.toList.map (fun ⟨a, i⟩ ↦ f a * x ^ i)).sum := by
-  convert eval₂_eq_eval₂_naive f x p using 1
-  · unfold CPolynomial.Raw.eval₂Naive
-    induction p using Array.recOn
-    simp +decide [*]
-    induction' ‹List R› using List.reverseRecOn with _ _ ih <;>
-      simp +decide [*, List.zipIdx_append]
-
-end EvalBridge
-
-section Semiring
-
-variable {R : Type*} [Semiring R] [BEq R]
-variable {Q : Type*} [Semiring Q]
-variable {S : Type*}
-variable (p q r : CPolynomial.Raw R)
 
 section AddDefs
 
@@ -634,24 +576,11 @@ section MulInfrastructure
 section MulCoeffHelpers
 
 lemma equiv_mul_one [LawfulBEq R] (p : CPolynomial.Raw R) : Trim.equiv (p * 1) p := by
-  have h_mul_one : ∀ (p : CPolynomial.Raw R), (p * 1).coeff = p.coeff := by
-    intro p; funext i
-    rw [ show p * 1 = p * 1 from rfl ]
-    have mul_one_unwrap : ∀ (p : CPolynomial.Raw R), (p * 1).coeff = fun k =>
-      (p.zipIdx.map (fun ⟨a, i⟩ => ((smul a 1).mulPowX i).coeff k)).sum := by
-      intro p; funext k; exact (by
-      convert coeff_foldl_add
-          ( p.zipIdx.toList ) ( fun ⟨ a, i ⟩ => ( smul a 1 ).mulPowX i ) ( mk #[] ) k using 1
-      · have h_mul_def : ∀ (p : CPolynomial.Raw R), p * 1 =
-            (p.zipIdx.foldl (fun acc ⟨a, i⟩ => acc + (smul a 1).mulPowX i) (mk #[])) :=
-          fun p => mul_eq_foldl p 1
-        rw [h_mul_def, Array.foldl_toList]
-      · simp +decide
-        conv => rw [ ← Array.toList_zipIdx ]
-        conv => rw [ ← Array.toList_map ]
-        exact Eq.symm Array.sum_toList)
-    exact (by exact mul_one_unwrap p ▸ coeff_sum p i ▸ rfl)
-  exact congrFun (h_mul_one p)
+  intro k
+  rw [coeff_mul]
+  rw [← Array.toList_map]
+  rw [Array.sum_eq_sum_toList]
+  exact coeff_sum p k
 
 theorem mul_is_trimmed [LawfulBEq R] (p q : CPolynomial.Raw R) : (p * q).trim = p * q := by
   show ((mulRaw p q).trim).trim = (mulRaw p q).trim
@@ -758,6 +687,18 @@ lemma mulX_monomial_one [DecidableEq R] [LawfulBEq R] [Nontrivial R] (n : ℕ) :
   exact Nat.recOn n (by simp +decide) fun n ih =>
     by simp +decide [ List.replicate ] at ih ⊢; tauto
 
+lemma X_pow_eq_monomial_one [DecidableEq R] [LawfulBEq R] [Nontrivial R] (n : ℕ) :
+    (X : CPolynomial.Raw R) ^ n = monomial n 1 := by
+  have h_monomial : ∀ n : ℕ,
+      (monomial n (1 : R)).trim =
+      monomial n (1 : R) := by
+    exact fun n => monomial_canonical n 1
+  induction' n with n ih;
+  · unfold X monomial
+    aesop
+  · rw [ pow_succ, ih ];
+    rw [ X_mul_eq_mulX_trim ];
+    rw [ mulX_monomial_one, h_monomial ]
 
 lemma smul_monomial_one_trim [DecidableEq R] [LawfulBEq R]
     [Nontrivial R] (n : ℕ) (r : R) :
@@ -1084,52 +1025,12 @@ omit [BEq R] in
 theorem eval₂Horner_eq_eval₂
     (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
     eval₂Horner f x p = eval₂ f x p := by
-    unfold eval₂ eval₂Horner
-    congr 1
-    funext a acc
-    rw [_root_.add_comm]
+  unfold eval₂ eval₂Horner
+  rw [← Array.foldl_toList, ← Array.foldr_toList, Array.toList_zipIdx]
+  have := foldl_zipIdx_eq_foldr_pow_k f x 0 0 p.toList
+  simpa using this.symm
 
 end EvalTheorems
-
-section PowTheorems
-
-variable [LawfulBEq R]
-
-lemma pow_succ (p : CPolynomial.Raw R) (n : ℕ) :
-    p ^ (n + 1) = p * (p ^ n) := powIterate_succ p n
-
-lemma pow_mul_comm (p : CPolynomial.Raw R) : ∀ n : ℕ,
-    p * (p ^ n) = p ^ n * p
-  | 0 => by
-    have h1 : (p ^ 0 : CPolynomial.Raw R) = 1 := pow_zero p
-    rw [h1, mul_one_trim, one_mul_trim]
-  | n + 1 => by
-    have ih := pow_mul_comm p n
-    calc p * p ^ (n + 1) = p * (p * p ^ n) := by rw [pow_succ]
-      _ = p * (p ^ n * p) := by rw [ih]
-      _ = (p * p ^ n) * p := by rw [Raw.mul_assoc]
-      _ = p ^ (n + 1) * p := by rw [pow_succ]
-
-/-- `p ^ (n + 1) = p ^ n * p` under `LawfulBEq`. -/
-lemma pow_succ_right (p : CPolynomial.Raw R) (n : ℕ) :
-    p ^ (n + 1) = p ^ n * p := by
-  rw [pow_succ]
-  exact pow_mul_comm p n
-
-lemma X_pow_eq_monomial_one [DecidableEq R] [Nontrivial R] (n : ℕ) :
-    (X : CPolynomial.Raw R) ^ n = monomial n 1 := by
-  have h_monomial : ∀ n : ℕ,
-      (monomial n (1 : R)).trim =
-      monomial n (1 : R) := by
-    exact fun n => monomial_canonical n 1
-  induction' n with n ih;
-  · rw [pow_zero]
-    show C (1 : R) = monomial 0 1
-    rw [monomial, if_neg (one_ne_zero)]
-    rfl
-  · rw [ pow_succ X n, ih, X_mul_eq_mulX_trim, mulX_monomial_one, h_monomial ]
-
-end PowTheorems
 
 end Semiring
 
@@ -1163,9 +1064,10 @@ protected theorem mul_comm [LawfulBEq R] (p q : CPolynomial.Raw R) : p * q = q *
 
 end CommutativeSemiring
 
--- `neg_coeff` is provided by `CompPoly.Univariate.ToPoly.Raw` (imported transitively
--- via `Raw.Division`), and was removed here to avoid a duplicate declaration after the
--- `toPoly` bridge lemmas were relocated below the `Proofs`/`Division` import cycle.
+lemma neg_coeff {R : Type*} [NegZeroClass R] (p : CPolynomial.Raw R) (i : ℕ) :
+    p.neg.coeff i = - p.coeff i := by
+  unfold neg coeff
+  rcases (Nat.lt_or_ge i p.size) with hi | hi <;> simp [hi]
 
 section Ring
 
@@ -1276,86 +1178,29 @@ lemma subScaledShift_eq_sub_C_mul_X_pow [LawfulBEq R]
   · have hnot : ¬(shift ≤ i ∧ i - shift < q.size) := by omega
     simp [coeff, hi, hnot]
 
-/-- `toPoly` image of the remainder-only long-division loop: for a monic canonical divisor
-`q` and a canonical dividend `p`, with at least `p.trim.size` units of fuel, the executable
-remainder-only loop reduces `p` to the polynomial remainder `p.toPoly %ₘ q.toPoly`.
-
-  Provenance: the previous statement related the loop to `divModByMonicAux.go` via a shared
-  fuel argument, but `divModByMonicAux.go` is well-founded (no fuel), so that statement did
-  not type-check after the recursion was made well-founded. This re-proof targets the
-  `toPoly` specification directly by strong induction on the well-founded measure, then the
-  public lemma concludes equality from canonicity. The `q.monic` hypothesis is genuinely
-  required: for a non-monic divisor `modByMonic` returns `0` while the remainder-only loop
-  subtracts leading-coefficient-scaled shifts, so the two agree only when `q` is monic. -/
-lemma modByMonicRemainderOnly_go_toPoly [LawfulBEq R] (q : CPolynomial.Raw R)
-    (hqc : q.trim = q) (hqm : q.monic = true) :
-    ∀ (fuel : ℕ) (p : CPolynomial.Raw R), p.trim = p → p.trim.size ≤ fuel →
-      (modByMonicRemainderOnly.go fuel p q).toPoly = p.toPoly %ₘ q.toPoly := by
-  have hqmonic : q.toPoly.Monic := (monic_iff_toPoly_monic q).mp hqm
-  intro fuel
-  induction fuel with
+lemma modByMonicRemainderOnly_go_eq_divModByMonicAux_go_snd [LawfulBEq R] :
+    ∀ (n : ℕ) (p q : CPolynomial.Raw R),
+      modByMonicRemainderOnly.go n p q = (divModByMonicAux.go n p q).2 := by
+  intro n
+  induction n with
   | zero =>
-      intro p hp hfuel
-      have hp0 : p.trim.size = 0 := Nat.le_zero.mp hfuel
-      have hpoly0 : p.toPoly = 0 := (trim_size_zero_iff_toPoly_zero p).mp hp0
-      simp [modByMonicRemainderOnly.go, hpoly0]
-  | succ fuel ih =>
-      intro p hp hfuel
-      unfold modByMonicRemainderOnly.go
-      have hqne : q.toPoly ≠ 0 := by
-        intro h; rw [h] at hqmonic; exact Polynomial.not_monic_zero hqmonic
+      intro p q
+      rfl
+  | succ n ih =>
+      intro p q
+      unfold modByMonicRemainderOnly.go divModByMonicAux.go
       by_cases hsize : p.size < q.size
-      · -- base case: the divisor strictly dominates, so the remainder is `p` itself
-        rw [if_pos hsize]
-        symm
-        by_cases hp0 : p.toPoly = 0
-        · simp [hp0]
-        · rw [Polynomial.modByMonic_eq_self_iff hqmonic]
-          rw [Polynomial.degree_eq_natDegree hp0, Polynomial.degree_eq_natDegree hqne]
-          have hpe : p.size = p.toPoly.natDegree + 1 := by
-            have h := trim_size_eq_natDegree_succ p hp0; rwa [hp] at h
-          have hqe : q.size = q.toPoly.natDegree + 1 := by
-            have h := trim_size_eq_natDegree_succ q hqne; rwa [hqc] at h
-          exact_mod_cast (by omega : p.toPoly.natDegree < q.toPoly.natDegree)
-      · -- recursive case
-        rw [if_neg hsize]
-        simp only []
-        have hge : q.size ≤ p.size := Nat.le_of_not_lt hsize
+      · simp [hsize]
+      · simp [hsize]
         have hle : p.size - q.size + q.size ≤ p.size := by omega
         rw [subScaledShift_eq_sub_C_mul_X_pow p q p.leadingCoeff (p.size - q.size) hle]
-        set p' := (p - C p.leadingCoeff * (q * X ^ (p.size - q.size))).trim with hp'def
-        have hp'canon : p'.trim = p' := Trim.trim_twice _
-        have hq0size : 0 < q.size := by
-          have := (trim_size_pos_iff_toPoly_ne_zero q).mpr hqne
-          rwa [hqc] at this
-        have hp0 : p.toPoly ≠ 0 := by
-          intro h0
-          have hps : p.trim.size = 0 := (trim_size_zero_iff_toPoly_zero p).mpr h0
-          rw [hp] at hps
-          omega
-        have hpe : p.size = p.toPoly.natDegree + 1 := by
-          have h := trim_size_eq_natDegree_succ p hp0; rwa [hp] at h
-        have hqe : q.size = q.toPoly.natDegree + 1 := by
-          have h := trim_size_eq_natDegree_succ q hqne; rwa [hqc] at h
-        have hndle : q.toPoly.natDegree ≤ p.toPoly.natDegree := by omega
-        -- `p'` has strictly smaller measure, so the fuel suffices and IH applies
-        have hp'_toPoly : p'.toPoly = p.toPoly - q.toPoly * (Polynomial.C p.toPoly.leadingCoeff *
-            Polynomial.X ^ (p.toPoly.natDegree - q.toPoly.natDegree)) := by
-          rw [hp'def, toPoly_trim, toPoly_sub, toPoly_mul, toPoly_C, toPoly_mul,
-            toPoly_pow, toPoly_X]
-          rw [leadingCoeff_toPoly]
-          have hpnd : p.size - q.size = p.toPoly.natDegree - q.toPoly.natDegree := by omega
-          rw [hpnd]; ring
-        have hmeasure : p'.trim.size < p.trim.size := by
-          have hlt : p'.toPoly.degree < p.toPoly.degree := by
-            rw [hp'_toPoly]
-            refine Polynomial.div_wf_lemma ⟨?_, hp0⟩ hqmonic
-            rw [Polynomial.degree_eq_natDegree hp0, Polynomial.degree_eq_natDegree hqne]
-            exact_mod_cast hndle
-          exact trim_size_lt_of_degree_lt p' p hp0 hlt
-        rw [ih p' hp'canon (by omega)]
-        rw [hp'_toPoly, Polynomial.sub_modByMonic, Polynomial.self_mul_modByMonic hqmonic,
-          sub_zero]
+        exact ih _ _
+
+/-- The remainder-only raw monic remainder agrees with the canonical raw monic remainder. -/
+theorem modByMonicRemainderOnly_eq_modByMonic [LawfulBEq R]
+    (p q : CPolynomial.Raw R) :
+    modByMonicRemainderOnly p q = modByMonic p q := by
+  exact modByMonicRemainderOnly_go_eq_divModByMonicAux_go_snd p.size p q
 
 end
 
@@ -1363,60 +1208,51 @@ section
 variable [CommRing R]
 
 /-- The quotient produced by the monic long-division recursion is canonical regardless of input:
-each non-base step accumulates via `Raw.add` (which trims), and the base case returns `0`.
-
-  The recursion `divModByMonicAux.go` is well-founded on `p.trim.size`, so the proof proceeds by
-  strong induction on that measure rather than on an explicit fuel parameter. -/
-lemma divModByMonicAux_go_fst_canonical [LawfulBEq R] (q : CPolynomial.Raw R)
-    (hq : q.monic = true) (p : CPolynomial.Raw R) :
-      (divModByMonicAux.go p q hq).1.trim = (divModByMonicAux.go p q hq).1 := by
-  rw [divModByMonicAux_go_unfold_1]
-  by_cases h : q.trim.size ≤ p.trim.size ∧ 0 < p.trim.size
-  · rw [if_pos h]
-    exact add_is_trimmed _ _
-  · rw [if_neg h]
-    exact Trim.canonical_empty
+each non-base step accumulates via `Raw.add` (which trims), and the base case returns `0`. -/
+lemma divModByMonicAux_go_fst_canonical [LawfulBEq R] :
+    ∀ (n : ℕ) (p q : CPolynomial.Raw R),
+      (divModByMonicAux.go n p q).1.trim = (divModByMonicAux.go n p q).1 := by
+  intro n
+  induction n with
+  | zero =>
+      intro p q
+      exact Trim.canonical_empty
+  | succ n _ih =>
+      intro p q
+      unfold divModByMonicAux.go
+      by_cases hsize : p.size < q.size
+      · simp [hsize]; exact Trim.canonical_empty
+      · simp only [hsize, ↓reduceIte]
+        exact add_is_trimmed _ _
 
 /-- The remainder produced by the monic long-division recursion is canonical when the input is.
 Each recursive step feeds the next call a trimmed `(p - q').trim`, and the base case returns the
-input unchanged.
-
-  The recursion `divModByMonicAux.go` is well-founded on `p.trim.size`, so the proof proceeds by
-  strong induction on that measure rather than on an explicit fuel parameter. -/
-lemma divModByMonicAux_go_snd_canonical [LawfulBEq R] (q : CPolynomial.Raw R)
-    (hq : q.monic = true) (p : CPolynomial.Raw R) (hp : p.trim = p) :
-      (divModByMonicAux.go p q hq).2.trim = (divModByMonicAux.go p q hq).2 := by
-  induction hn : p.trim.size using Nat.strong_induction_on generalizing p with
-  | _ n ih =>
-    rw [divModByMonicAux_go_unfold_2]
-    by_cases h : q.trim.size ≤ p.trim.size ∧ 0 < p.trim.size
-    · rw [if_pos h]
-      have hwf : (p - q * (C p.leadingCoeff * X ^ (p.natDegree - q.natDegree))).trim.size
-          < p.trim.size := divByMonic_wf_termination p q hq h.1 h.2
-      exact ih _ (hn ▸ hwf)
-        (p - q * (C p.leadingCoeff * X ^ (p.natDegree - q.natDegree))) (Trim.trim_twice _) rfl
-    · rw [if_neg h]
+input unchanged. -/
+lemma divModByMonicAux_go_snd_canonical [LawfulBEq R] :
+    ∀ (n : ℕ) (p q : CPolynomial.Raw R), p.trim = p →
+      (divModByMonicAux.go n p q).2.trim = (divModByMonicAux.go n p q).2 := by
+  intro n
+  induction n with
+  | zero =>
+      intro p _q hp
       exact hp
+  | succ n ih =>
+      intro p q hp
+      unfold divModByMonicAux.go
+      by_cases hsize : p.size < q.size
+      · simp [hsize]; exact hp
+      · simp only [hsize, ↓reduceIte]
+        exact ih _ q (Trim.trim_twice _)
 
-/-- `Raw.divByMonic` returns a canonical polynomial when `q` is monic. -/
+/-- `Raw.divByMonic` returns a canonical polynomial regardless of whether `p` is canonical. -/
 theorem divByMonic_canonical [LawfulBEq R] (p q : CPolynomial.Raw R) :
-    (divByMonic p q).trim = divByMonic p q := by
-  unfold divByMonic divModByMonicAux
-  by_cases hq : q.monic = true
-  · rw [dif_pos hq]
-    exact divModByMonicAux_go_fst_canonical q hq p
-  · rw [dif_neg hq]
-    exact Trim.canonical_empty
+    (divByMonic p q).trim = divByMonic p q :=
+  divModByMonicAux_go_fst_canonical p.size p q
 
-/-- `Raw.modByMonic` returns a canonical polynomial when `p` is canonical and `q` is monic. -/
+/-- `Raw.modByMonic` returns a canonical polynomial when `p` is canonical. -/
 theorem modByMonic_canonical [LawfulBEq R] {p : CPolynomial.Raw R} (hp : p.trim = p)
-    (q : CPolynomial.Raw R) : (modByMonic p q).trim = modByMonic p q := by
-  unfold modByMonic divModByMonicAux
-  by_cases hq : q.monic = true
-  · rw [dif_pos hq]
-    exact divModByMonicAux_go_snd_canonical q hq p hp
-  · rw [dif_neg hq]
-    exact Trim.canonical_empty
+    (q : CPolynomial.Raw R) : (modByMonic p q).trim = modByMonic p q :=
+  divModByMonicAux_go_snd_canonical p.size p q hp
 
 end
 
@@ -1453,25 +1289,6 @@ theorem modByMonicRemainderOnly_canonical [LawfulBEq R]
     (modByMonicRemainderOnly p q).trim = modByMonicRemainderOnly p q :=
   modByMonicRemainderOnly_go_canonical p.size p q hp
 
-/-- The remainder-only raw monic remainder agrees with the canonical raw monic remainder,
-for a monic canonical divisor and a canonical dividend. Both sides are canonical and share
-the same `toPoly` image (the polynomial remainder `p.toPoly %ₘ q.toPoly`), so they are equal.
-
-  The `q.monic` hypothesis is genuinely required (see `modByMonicRemainderOnly_go_toPoly`). -/
-theorem modByMonicRemainderOnly_eq_modByMonic [LawfulBEq R]
-    (p q : CPolynomial.Raw R) (hp : p.trim = p) (hqc : q.trim = q) (hqm : q.monic = true) :
-    modByMonicRemainderOnly p q = modByMonic p q := by
-  apply Trim.isCanonical_ext
-  · exact Trim.isCanonical_of_trim_eq (modByMonicRemainderOnly_canonical hp q)
-  · exact Trim.isCanonical_of_trim_eq (modByMonic_canonical hp q)
-  intro i
-  rw [← coeff_toPoly, ← coeff_toPoly]
-  congr 1
-  rw [show modByMonicRemainderOnly p q = modByMonicRemainderOnly.go p.size p q from rfl,
-    modByMonicRemainderOnly_go_toPoly q hqc hqm p.size p hp (by rw [hp])]
-  rw [show modByMonic p q = (divModByMonicAux p q).2 from rfl, divModByMonicAux,
-    dif_pos hqm, divModByMonicAux_go_toPoly_2 p q hqm]
-
 /-- `Raw.modByMonicByReversal` returns a canonical polynomial when `p` is canonical.
 Either branch ends in a result whose trim is itself: the reversal branch ends with `Raw.sub`
 (which trims), and the fallback uses `modByMonicRemainderOnly`. -/
@@ -1489,12 +1306,13 @@ theorem div_canonical [LawfulBEq R] (p q : CPolynomial.Raw R) :
     (div p q).trim = div p q :=
   divByMonic_canonical _ _
 
-/-- `Raw.mod` returns a canonical polynomial (no condition on inputs).
-The intermediate `C (q.leadingCoeff)⁻¹ • p` is `C _ * p` via `Mul.toSMul`, which trims. -/
-theorem mod_canonical [LawfulBEq R] (p q : CPolynomial.Raw R) :
+/-- `Raw.mod` returns a canonical polynomial when the dividend is canonical. -/
+theorem mod_canonical [LawfulBEq R] {p : CPolynomial.Raw R} (hp : p.trim = p)
+    (q : CPolynomial.Raw R) :
     (mod p q).trim = mod p q := by
   unfold mod
-  exact Trim.trim_twice _
+  apply modByMonic_canonical (R := R)
+  exact hp
 
 end
 
@@ -1597,6 +1415,50 @@ termination_by n => n
 decreasing_by omega
 
 end RepeatedSquaring
+
+section EvalSum
+
+variable {R : Type*} [Semiring R] [BEq R] [LawfulBEq R]
+variable {S : Type*} [Semiring S]
+
+/-- `eval₂` equals the Finset sum over `range p.size`. -/
+theorem eval₂_eq_sum (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
+    eval₂ f x p =
+    (Finset.range p.size).sum (fun i ↦ f (p.coeff i) * x ^ i) := by
+  convert eval₂_eq_eval₂_naive f x p using 1
+  · unfold CPolynomial.Raw.eval₂Naive
+    induction p using Array.recOn
+    simp_all +decide
+    induction ‹List R› using List.reverseRecOn <;>
+      simp_all +decide [Finset.sum_range_succ]
+    simp_all +decide [Finset.sum_range, List.zipIdx_append]
+
+end EvalSum
+
+section PowSuccRight
+
+variable {R : Type*} [Semiring R] [BEq R]
+
+lemma pow_mul_comm [LawfulBEq R] (p : CPolynomial.Raw R) : ∀ n : ℕ,
+    p * (p ^ n) = p ^ n * p
+  | 0 => by
+    rw [pow_zero]
+    show p * (1 : CPolynomial.Raw R) = (1 : CPolynomial.Raw R) * p
+    rw [mul_one_trim, one_mul_trim]
+  | n + 1 => by
+    have ih := pow_mul_comm p n
+    calc p * p ^ (n + 1) = p * (p * p ^ n) := by rw [pow_succ]
+      _ = p * (p ^ n * p) := by rw [ih]
+      _ = (p * p ^ n) * p := by rw [Raw.mul_assoc]
+      _ = p ^ (n + 1) * p := by rw [← pow_succ]
+
+/-- `p ^ (n + 1) = p ^ n * p` under `LawfulBEq`. -/
+lemma pow_succ_right [LawfulBEq R] (p : CPolynomial.Raw R) (n : ℕ) :
+    p ^ (n + 1) = p ^ n * p := by
+  rw [pow_succ]
+  exact pow_mul_comm p n
+
+end PowSuccRight
 
 end CPolynomial.Raw
 

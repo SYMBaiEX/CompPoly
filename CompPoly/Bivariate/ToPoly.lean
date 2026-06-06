@@ -382,11 +382,7 @@ theorem evalY_toPoly {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semiring 
   rw [ Finset.sum_subset ]
   · exact fun i hi ↦ Finset.mem_range.mpr
       (Nat.lt_of_lt_of_le (Finset.mem_range.mp (Finset.mem_filter.mp hi |>.1)) (by simp))
-  · simp +contextual [ CPolynomial.support ]
-    simp +decide [ CPolynomial.toPoly, CPolynomial.Raw.toPoly ]
-    unfold CPolynomial.Raw.eval₂
-    erw [ Array.foldl_empty ]
-    simp
+  · simp +contextual [ CPolynomial.support, CPolynomial.toPoly_zero ]
 
 /-- Horner evaluation in Y agrees with the deferred-trim sum-of-powers evaluator.
 
@@ -427,6 +423,7 @@ theorem eval_eval_horner_y_then_x_eq_eval_eval {R : Type*}
 /-- `toPoly` preserves full evaluation: `evalEval x y f = (toPoly f).evalEval x y`. -/
 theorem evalEval_toPoly {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semiring R]
     (x y : R) (f : CBivariate R) :
+    evalEval x y f = (toPoly f).evalEval x y := by
   show CPolynomial.eval x (evalY (R := R) y f) = (toPoly f).evalEval x y
   rw [CPolynomial.eval_toPoly, evalY_toPoly]
 

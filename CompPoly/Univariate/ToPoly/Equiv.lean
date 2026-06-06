@@ -23,11 +23,13 @@ variable {R : Type*} [Semiring R] [BEq R]
 
 section RingEquiv
 
--- `Raw.toPoly_neg`, `Raw.toPoly_sub`, `Raw.toPoly_mul`, `Raw.toPoly_C`, `Raw.toPoly_one`,
--- `Raw.toPoly_pow`, `Raw.toPoly_zero`, and `Raw.toPoly_X` were moved to
--- `CompPoly.Univariate.ToPoly.Raw` (below the `Raw.Proofs`/`Raw.Division` import cycle) so
--- that `Raw.Division` can use them. The `CPolynomial`-level wrappers below still delegate to
--- those `Raw.*` lemmas.
+@[grind =]
+lemma Raw.toPoly_neg {R : Type*} [Ring R] [BEq R] [LawfulBEq R] (p : CPolynomial.Raw R) :
+    (-p).toPoly = -p.toPoly := by
+  ext i
+  rw [Polynomial.coeff_neg, Raw.coeff_toPoly, Raw.coeff_toPoly]
+  change p.neg.coeff i = -p.coeff i
+  exact Raw.neg_coeff p i
 
 @[grind =]
 lemma toPoly_neg {R : Type*} [Ring R] [BEq R] [LawfulBEq R] (p : CPolynomial R) :
@@ -38,6 +40,13 @@ lemma toPoly_neg {R : Type*} [Ring R] [BEq R] [LawfulBEq R] (p : CPolynomial R) 
 lemma toPoly_add [LawfulBEq R] (p q : CPolynomial R) :
     (p + q).toPoly = p.toPoly + q.toPoly := by
   apply Raw.toPoly_add
+
+@[grind =]
+lemma Raw.toPoly_sub {R : Type*} [Ring R] [BEq R] [LawfulBEq R]
+    (p q : CPolynomial.Raw R) :
+    (p - q).toPoly = p.toPoly - q.toPoly := by
+  change (p + -q).toPoly = p.toPoly + -q.toPoly
+  rw [Raw.toPoly_add, Raw.toPoly_neg]
 
 @[grind =]
 lemma toPoly_sub {R : Type*} [Ring R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) :
@@ -65,6 +74,12 @@ lemma Raw.toPoly_mul_coeff [LawfulBEq R] (p q : CPolynomial.Raw R) (i : ℕ) :
   simp [hp, hq]
 
 @[grind =]
+lemma Raw.toPoly_mul [LawfulBEq R] (p q : CPolynomial.Raw R) :
+    (p * q).toPoly = p.toPoly * q.toPoly := by
+  ext i
+  exact Raw.toPoly_mul_coeff p q i
+
+@[grind =]
 lemma toPoly_mul_coeffC [LawfulBEq R] (p q : CPolynomial R) (i : ℕ) :
     (p.val * q.val).toPoly.coeff i = (p.val.toPoly * q.val.toPoly).coeff i := by
   simpa using Raw.toPoly_mul_coeff p.val q.val i
@@ -82,12 +97,44 @@ lemma eval₂_C {R : Type*} [Semiring R] {S : Type*} [Semiring S]
   ring_nf
   simp [Array.zipIdx]
 
+@[simp, grind =]
+lemma Raw.toPoly_C {R : Type*} [Semiring R] (r : R) :
+    (Raw.C r).toPoly = Polynomial.C r := by
+  unfold Raw.toPoly
+  exact eval₂_C Polynomial.C Polynomial.X r
+
+@[simp, grind =]
+lemma Raw.toPoly_one {R : Type*} [Semiring R] :
+    (1 : CPolynomial.Raw R).toPoly = 1 := by
+  have : (1 : CPolynomial.Raw R).toPoly = (Raw.C 1).toPoly := by rfl
+  apply this.trans; clear this
+  apply toPoly_C
+
 lemma toPoly_one [LawfulBEq R] [Nontrivial R] :
     (1 : CPolynomial R).toPoly = 1 := by
   apply Raw.toPoly_one
 
+@[grind =]
+lemma Raw.toPoly_pow [LawfulBEq R] (p : CPolynomial.Raw R) :
+    ∀ n : ℕ, (p ^ n).toPoly = p.toPoly ^ n
+  | 0 => by
+      simp [Raw.pow_zero]
+  | n + 1 => by
+      rw [Raw.pow_succ, Raw.toPoly_mul, Raw.toPoly_pow p n]
+      simp [pow_succ']
+
+@[simp, grind =]
+lemma Raw.toPoly_zero {R : Type*} [Semiring R] : (0 : CPolynomial.Raw R).toPoly = 0 := by
+  simp [Raw.toPoly, Raw.eval₂]
+
 lemma toPoly_zero {R : Type*} [Semiring R] : (0 : CPolynomial R).toPoly = 0 := by
   apply Raw.toPoly_zero
+
+@[simp, grind =]
+lemma Raw.toPoly_X {R : Type*} [Semiring R] :
+    (Raw.X : CPolynomial.Raw R).toPoly = Polynomial.X := by
+  unfold CPolynomial.Raw.X
+  simp [Raw.toPoly, Raw.eval₂]
 
 @[grind =]
 lemma toPoly_pow [Nontrivial R] [LawfulBEq R] (p : CPolynomial R) (n : ℕ) :

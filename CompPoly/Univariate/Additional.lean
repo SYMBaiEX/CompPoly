@@ -232,7 +232,7 @@ private lemma divModByMonicAux_go_degree_bound (n : ℕ) (p q : CPolynomial.Raw 
 /-! ### Main theorem: toPoly commutes with divByMonic -/
 
 theorem toPoly_divByMonic (fp fq : CPolynomial R) (hq : fq.toPoly.Monic) :
-    (fp.divByMonic fq).toPoly = fp.toPoly /ₘ fq.toPoly := by
+    (_root_.CompPoly.divByMonic fp fq).toPoly = fp.toPoly /ₘ fq.toPoly := by
   set fuel := fp.val.size
   have heq := divModByMonicAux_go_eq fuel fp.val fq.val
   have hdeg :=
@@ -242,9 +242,8 @@ theorem toPoly_divByMonic (fp fq : CPolynomial R) (hq : fq.toPoly.Monic) :
         omega)
   set quot := (Raw.divModByMonicAux.go fuel fp.val fq.val).1
   set rem := (Raw.divModByMonicAux.go fuel fp.val fq.val).2
-  have hd : (fp.divByMonic fq).toPoly = quot.toPoly := by
-    change (Raw.divByMonic fp.val fq.val).trim.toPoly = quot.toPoly
-    rw [Raw.toPoly_trim]
+  have hd : (_root_.CompPoly.divByMonic fp fq).toPoly = quot.toPoly := by
+    change (Raw.divByMonic fp.val fq.val).toPoly = quot.toPoly
     change (Raw.divModByMonicAux fp.val fq.val).1.toPoly = quot.toPoly
     simp only [Raw.divModByMonicAux, fuel, quot]
   have huniq := @Polynomial.div_modByMonic_unique R _ fp.toPoly fq.toPoly
@@ -253,7 +252,7 @@ theorem toPoly_divByMonic (fp fq : CPolynomial R) (hq : fq.toPoly.Monic) :
   exact huniq.1.symm
 
 theorem toPoly_modByMonic (fp fq : CPolynomial R) (hq : fq.toPoly.Monic) :
-    (fp.modByMonic fq).toPoly = fp.toPoly %ₘ fq.toPoly := by
+    (_root_.CompPoly.modByMonic fp fq).toPoly = fp.toPoly %ₘ fq.toPoly := by
   set fuel := fp.val.size
   have heq := divModByMonicAux_go_eq fuel fp.val fq.val
   have hdeg :=
@@ -263,9 +262,8 @@ theorem toPoly_modByMonic (fp fq : CPolynomial R) (hq : fq.toPoly.Monic) :
         omega)
   set quot := (Raw.divModByMonicAux.go fuel fp.val fq.val).1
   set rem := (Raw.divModByMonicAux.go fuel fp.val fq.val).2
-  have hd : (fp.modByMonic fq).toPoly = rem.toPoly := by
-    change (Raw.modByMonic fp.val fq.val).trim.toPoly = rem.toPoly
-    rw [Raw.toPoly_trim]
+  have hd : (_root_.CompPoly.modByMonic fp fq).toPoly = rem.toPoly := by
+    change (Raw.modByMonic fp.val fq.val).toPoly = rem.toPoly
     change (Raw.divModByMonicAux fp.val fq.val).2.toPoly = rem.toPoly
     simp only [Raw.divModByMonicAux, fuel, rem]
   have huniq := @Polynomial.div_modByMonic_unique R _ fp.toPoly fq.toPoly

@@ -18,97 +18,60 @@ namespace CompPoly
 
 open CPolynomial
 
+section MonicDivision
+
+variable {R : Type*} [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R]
+
+/-- Quotient of `p` by a monic polynomial `q`. Matches Mathlib's `Polynomial.divByMonic`. -/
+abbrev divByMonic (p q : CPolynomial R) : CPolynomial R :=
+  p.divByMonic q
+
+/-- Remainder of `p` modulo a monic polynomial `q`. Matches Mathlib's `Polynomial.modByMonic`. -/
+abbrev modByMonic (p q : CPolynomial R) : CPolynomial R :=
+  p.modByMonic q
+
+end MonicDivision
+
 section Division
 
 variable {R : Type*} [Field R] [BEq R] [LawfulBEq R]
 
-/-- Quotient of `p` by a monic polynomial `q`. Matches Mathlib's `Polynomial.divByMonic`. -/
-def divByMonic (p q : CPolynomial R) : CPolynomial R :=
-  ⟨(Raw.divByMonic p.val q.val).trim, Raw.Trim.isCanonical_trim (Raw.divByMonic p.val q.val)⟩
-
-/-- Remainder of `p` modulo a monic polynomial `q`. Matches Mathlib's `Polynomial.modByMonic`. -/
-def modByMonic (p q : CPolynomial R) : CPolynomial R :=
-  ⟨(Raw.modByMonic p.val q.val).trim, Raw.Trim.isCanonical_trim (Raw.modByMonic p.val q.val)⟩
-
 /-- Remainder of `p` modulo a monic polynomial `q`, using a remainder-only implementation. -/
-def modByMonicRemainderOnly (p q : CPolynomial R) : CPolynomial R :=
-  ⟨(Raw.modByMonicRemainderOnly p.val q.val).trim, Raw.Trim.isCanonical_trim (Raw.modByMonicRemainderOnly p.val q.val)⟩
+abbrev modByMonicRemainderOnly (p q : CPolynomial R) : CPolynomial R :=
+  p.modByMonicRemainderOnly q
 
 /-- Remainder of `p` modulo a monic polynomial `q`, using reversal and low products. -/
-def modByMonicByReversal (M : Raw.MulLowContext R) (p q : CPolynomial R) : CPolynomial R :=
-  ⟨(Raw.modByMonicByReversal M p.val q.val).trim, Raw.Trim.isCanonical_trim (Raw.modByMonicByReversal M p.val q.val)⟩
+abbrev modByMonicByReversal (M : Raw.MulLowContext R) (p q : CPolynomial R) : CPolynomial R :=
+  p.modByMonicByReversal M q
 
 /-- The remainder-only monic remainder agrees with the canonical monic remainder. -/
 theorem modByMonicRemainderOnly_eq_modByMonic (p q : CPolynomial R) :
     modByMonicRemainderOnly p q = modByMonic p q := by
-  apply CPolynomial.ext
-  simp [modByMonicRemainderOnly, modByMonic, Raw.modByMonicRemainderOnly_eq_modByMonic]
+  exact CPolynomial.modByMonicRemainderOnly_eq_modByMonic p q
 
 /-- Quotient of `p` by `q` (when `R` is a field). -/
-def div (p q : CPolynomial R) : CPolynomial R :=
-  ⟨(Raw.div p.val q.val).trim, Raw.Trim.isCanonical_trim (Raw.div p.val q.val)⟩
+abbrev div (p q : CPolynomial R) : CPolynomial R :=
+  p.div q
 
 /-- Remainder of `p` modulo `q` (when `R` is a field). -/
-def mod (p q : CPolynomial R) : CPolynomial R :=
-  ⟨(Raw.mod p.val q.val).trim, Raw.Trim.isCanonical_trim (Raw.mod p.val q.val)⟩
+abbrev mod (p q : CPolynomial R) : CPolynomial R :=
+  p.mod q
 
 instance : Div (CPolynomial R) := ⟨div⟩
 instance : Mod (CPolynomial R) := ⟨mod⟩
 
-/-- Any `CPolynomial` divided by the zero polynomial gives the zero
-polynomial. -/
-@[simp]
-theorem div_zero (p : CPolynomial R) : p.div 0 = 0 := by
-  apply Subtype.ext; show (Raw.div p.val 0).trim = 0; unfold Raw.div
-  rw [Raw.mul_zero, Raw.leadingCoeff_zero, inv_zero]
-  rw [smul_eq_mul, Raw.C_mul_eq_smul_trim, Raw.smul_zero_trim]; rfl
-
-/-- Any `CPolynomial` modulo the zero polynomial gives the zero
-polynomial. -/
-@[simp]
-theorem mod_zero (p : CPolynomial R) : p.mod 0 = 0 := by
-  apply Subtype.ext; show (Raw.mod p.val 0).trim = 0; unfold Raw.mod
-  rw [Raw.mul_zero, Raw.leadingCoeff_zero, inv_zero]
-  rw [smul_eq_mul, Raw.C_mul_eq_smul_trim, Raw.smul_zero_trim]; rfl
-
 /-- Normalize a nonzero polynomial to monic form. The zero polynomial stays zero. -/
-def monicNormalize (p : CPolynomial R) : CPolynomial R :=
+abbrev monicNormalize (p : CPolynomial R) : CPolynomial R :=
   CPolynomial.ofArray (Raw.monicNormalize p.val)
 
 /-- Euclidean gcd with explicit fuel, normalized to a monic result. -/
-def gcdMonicWithFuel :
-    Nat → CPolynomial R → CPolynomial R → CPolynomial R
-  | fuel, p, q => CPolynomial.ofArray (Raw.gcdMonicWithFuel fuel p.val q.val)
+abbrev gcdMonicWithFuel (fuel : Nat) (p q : CPolynomial R) : CPolynomial R :=
+  CPolynomial.ofArray (Raw.gcdMonicWithFuel fuel p.val q.val)
 
 /-- Monic Euclidean gcd for canonical univariate polynomials. -/
-def gcdMonic (p q : CPolynomial R) : CPolynomial R :=
+abbrev gcdMonic (p q : CPolynomial R) : CPolynomial R :=
   CPolynomial.ofArray (Raw.gcdMonic p.val q.val)
 
 end Division
 
-section ImplementationCorrectness
-
-variable {R : Type*} [Field R] [BEq R] [LawfulBEq R]
-
-/-- `div` matches `Polynomial.div` with respect to `toPoly` -/
-theorem div_toPoly (p q : CPolynomial R) :
-    (div p q).toPoly = (Polynomial.div p.toPoly q.toPoly) := by
-  show (Raw.div p.val q.val).trim.toPoly = _
-  rw [Raw.toPoly_trim]
-  exact Raw.div_toPoly p.val q.val
-
-/-- `mod` matches `Polynomial.mod` with respect to `toPoly` -/
-theorem mod_toPoly (p q : CPolynomial R) (hq : q ≠ 0) :
-    (mod p q).toPoly = (Polynomial.mod p.toPoly q.toPoly) := by
-  show (Raw.mod p.val q.val).trim.toPoly = _
-  rw [Raw.toPoly_trim]
-  have hq_val : q.val.toPoly ≠ 0 := by
-    intro h
-    apply hq
-    apply CPolynomial.ext
-    have hsize := (Raw.trim_size_zero_iff_toPoly_zero q.val).mpr h
-    simp_all only [ne_eq, trim_eq, Array.size_eq_zero_iff, Array.empty_eq]
-    rfl
-  exact Raw.mod_toPoly p.val q.val hq_val
-
-end ImplementationCorrectness
+end CompPoly

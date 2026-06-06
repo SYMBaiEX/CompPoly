@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Gregor Mitscha-Baude, Derek Sorensen
 -/
 import CompPoly.Univariate.ToPoly.Equiv
+import CompPoly.Univariate.Division
 import Mathlib.Algebra.Polynomial.Roots
 
 /-!
@@ -34,9 +35,8 @@ theorem monomial_toPoly [DecidableEq R] [LawfulBEq R] (n : ℕ) (c : R) :
 
 /-- CPolynomial.C is correct wrt the Mathlib spec. -/
 theorem C_toPoly [BEq R] [LawfulBEq R] (r : R) : (C r).toPoly = Polynomial.C r := by
-  convert Raw.toPoly_C r
-  convert Raw.toPoly_trim
-  infer_instance
+  change (Raw.C r).trim.toPoly = Polynomial.C r
+  rw [Raw.toPoly_trim, Raw.toPoly_C]
 
 /-- CPolynomial.X is correct wrt the Mathlib spec. -/
 theorem X_toPoly [BEq R] [LawfulBEq R] [Nontrivial R] :
@@ -57,7 +57,7 @@ theorem eval_C [BEq R] [LawfulBEq R] (a c : R) :
   rw [CPolynomial.eval_toPoly, CPolynomial.C_toPoly, Polynomial.eval_C]
 
 /-- Raw.eval₂ is correct wrt the Mathlib spec. -/
-theorem Raw.eval₂_toPoly {S : Type*} [Semiring S]
+theorem Raw.eval₂_toPoly [BEq R] [LawfulBEq R] {S : Type*} [Semiring S]
     (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
     p.eval₂ f x = p.toPoly.eval₂ f x := by
   unfold CompPoly.CPolynomial.Raw.toPoly
@@ -72,7 +72,7 @@ theorem Raw.eval₂_toPoly {S : Type*} [Semiring S]
     simp [Polynomial.eval₂_add, Polynomial.C_mul_X_pow_eq_monomial]
 
 /-- CPolynomial.eval₂ is correct wrt the Mathlib spec. -/
-theorem eval₂_toPoly {S : Type*} [Semiring S]
+theorem eval₂_toPoly [BEq R] [LawfulBEq R] {S : Type*} [Semiring S]
     (f : R →+* S) (x : S) (p : CPolynomial R) :
     eval₂ f x p = p.toPoly.eval₂ f x := by
   exact Raw.eval₂_toPoly f x p.val
@@ -100,21 +100,18 @@ theorem divX_toPoly [BEq R] [LawfulBEq R] (p : CPolynomial R) :
 /-- CPolynomial.support is correct wrt the Mathlib spec. -/
 theorem support_toPoly [BEq R] [LawfulBEq R] (p : CPolynomial R) :
     p.support = p.toPoly.support := by
-  convert Set.ext _
-  rotate_left
-  exact ℕ
-  exact { i | p.val.coeff i ≠ 0 }
-  exact { i | ( p.toPoly.coeff i ) ≠ 0 }
-  · simp +zetaDelta at *
-    intro x
-    convert Iff.rfl
-    convert Raw.coeff_toPoly
-    exact Eq.symm Array.getD_eq_getD_getElem?
-  · simp +decide [ CPolynomial.support, Finset.ext_iff, Set.ext_iff ]
-    grind
+  ext i
+  by_cases hi : i < p.val.size
+  · simp [CPolynomial.support, Polynomial.mem_support_iff, hi, ← coeff_toPoly p i,
+      CPolynomial.coeff, Raw.coeff]
+  · have hcoeff : p.toPoly.coeff i = 0 := by
+      rw [← coeff_toPoly p i]
+      simp [CPolynomial.coeff, Raw.coeff, hi]
+    simp [CPolynomial.support, Polynomial.mem_support_iff, hi, hcoeff]
 
 /-- lemma: toImpl is natDegree's succ -/
-private lemma size_toImpl_eq_natDegree_succ {q : R[X]} (hq : q ≠ 0) :
+private lemma size_toImpl_eq_natDegree_succ [BEq R] [LawfulBEq R]
+    {q : R[X]} (hq : q ≠ 0) :
     q.toImpl.size = q.natDegree + 1 := by
   rcases Raw.toImpl_elim q with ⟨hzero, _⟩ | ⟨_, himpl⟩
   · exact (hq hzero).elim
@@ -326,7 +323,7 @@ theorem eval_sub_C_mul_X_pow_trim_eq_self_of_eval_eq_zero
     [Field R] [BEq R] [LawfulBEq R] (p q : CPolynomial.Raw R) (scale : R)
     (shift : ℕ) {x : R} (hq : q.eval x = 0) :
     ((p - C scale * (q * X ^ shift)).trim).eval x = p.eval x := by
-  rw [eval_trim_eq_eval]
+  rw [Raw.eval_trim_eq_eval]
   rw [← eval_toPoly_eq_eval x]
   rw [toPoly_sub, toPoly_mul, toPoly_C, toPoly_mul, toPoly_pow, toPoly_X]
   rw [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_mul,
@@ -366,7 +363,7 @@ end Raw
 theorem eval_modByMonic_eq_self_of_eval_eq_zero
     [Field R] [BEq R] [LawfulBEq R] (p q : CPolynomial R) {x : R}
     (hq : q.eval x = 0) :
-    (CPolynomial.modByMonic p q).eval x = p.eval x := by
+    (_root_.CompPoly.modByMonic p q).eval x = p.eval x := by
   have hq_raw : q.val.eval x = 0 := by
     simpa [CPolynomial.eval, Raw.eval, Raw.eval₂] using hq
   change (Raw.modByMonic p.val q.val).eval x = p.val.eval x
