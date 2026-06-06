@@ -23,8 +23,11 @@ namespace CompPoly
 
 namespace CPolynomial
 
-variable {R : Type*} [Semiring R] [BEq R] [LawfulBEq R]
-variable {Q : Type*} [Semiring Q] [BEq Q] [LawfulBEq Q]
+-- Minimal blanket assumptions (typeclass-minimization): `BEq`/`LawfulBEq` are stated
+-- per-declaration on the trim-touching lemmas only, so the pure `toPoly` bridge lemmas
+-- remain usable in `BEq`-free contexts (e.g. the NTT layer over a plain field).
+variable {R : Type*} [Semiring R]
+variable {Q : Type*} [Semiring Q]
 variable {S : Type*} [Semiring S]
 
 namespace Raw
@@ -137,7 +140,7 @@ theorem toPoly_toImpl {p : Q[X]} : p.toImpl.toPoly = p := by
 
 /-- Trimming doesn't change the `toPoly` image. -/
 @[grind =]
-lemma toPoly_trim [LawfulBEq R] {p : CPolynomial.Raw R} : p.trim.toPoly = p.toPoly := by
+lemma toPoly_trim [BEq R] [LawfulBEq R] {p : CPolynomial.Raw R} : p.trim.toPoly = p.toPoly := by
   ext n
   rw [coeff_toPoly, coeff_toPoly, Trim.coeff_eq_coeff]
 
@@ -197,7 +200,7 @@ theorem toPoly_smulRight {p : CPolynomial.Raw Q} {r : Q} :
   | some a => simp
 
 @[grind =]
-lemma toPoly_add [LawfulBEq R] (p q : CPolynomial.Raw R) :
+lemma toPoly_add [BEq R] [LawfulBEq R] (p q : CPolynomial.Raw R) :
     (p + q).toPoly = p.toPoly + q.toPoly := by
   change (p.add q).toPoly = p.toPoly + q.toPoly; unfold add
   rw [toPoly_trim, toPoly_addRaw]
@@ -229,12 +232,12 @@ theorem isCanonical_toImpl (p : R[X]) : IsCanonical p.toImpl := by
 
 /-- `toImpl` produces canonical polynomials (no trailing zeros). -/
 @[simp, grind =]
-theorem trim_toImpl [LawfulBEq R] (p : R[X]) : p.toImpl.trim = p.toImpl := by
+theorem trim_toImpl [BEq R] [LawfulBEq R] (p : R[X]) : p.toImpl.trim = p.toImpl := by
   exact Trim.trim_eq_of_isCanonical (isCanonical_toImpl p)
 
 /-- The round-trip from `CPolynomial.Raw` to `Polynomial` and back yields the canonical form. -/
 @[simp, grind =]
-theorem Raw.toImpl_toPoly [LawfulBEq R] (p : CPolynomial.Raw R) : p.toPoly.toImpl = p.trim := by
+theorem toImpl_toPoly [BEq R] [LawfulBEq R] (p : CPolynomial.Raw R) : p.toPoly.toImpl = p.trim := by
   have h_inj : ∀ a b : CPolynomial.Raw R, IsCanonical a → IsCanonical b → a.toPoly = b.toPoly → a = b := by
     intro a b ha hb hab
     apply Trim.canonical_ext (Trim.trim_eq_of_isCanonical ha) (Trim.trim_eq_of_isCanonical hb)
@@ -248,7 +251,7 @@ theorem Raw.toImpl_toPoly [LawfulBEq R] (p : CPolynomial.Raw R) : p.toPoly.toImp
   exact h_inj _ _ h_canonical_toImpl h_canonical_trim h_eq_both
 
 /-- A nonempty trimmed raw polynomial bounds the degree of its `toPoly` image. -/
-theorem Raw.toPoly_natDegree_lt_trim_size_of_pos [LawfulBEq R]
+theorem toPoly_natDegree_lt_trim_size_of_pos [BEq R] [LawfulBEq R]
     (p : CPolynomial.Raw R) (hp : 0 < p.trim.size) :
     p.toPoly.natDegree < p.trim.size := by
   have hround := Raw.toImpl_toPoly (R := R) p
@@ -264,12 +267,12 @@ theorem Raw.toPoly_natDegree_lt_trim_size_of_pos [LawfulBEq R]
 
 /-- Evaluation is preserved by `toImpl`. -/
 @[simp, grind =]
-theorem eval_toImpl_eq_eval [LawfulBEq R] (x : R) (p : R[X]) : p.toImpl.eval x = p.eval x := by
+theorem eval_toImpl_eq_eval [BEq R] [LawfulBEq R] (x : R) (p : R[X]) : p.toImpl.eval x = p.eval x := by
   rw [← toPoly_toImpl (p := p), Raw.toImpl_toPoly, ← toPoly_trim, eval_toPoly_eq_eval]
 
 /-- Evaluation is unchanged by trimming. -/
 @[simp, grind =]
-lemma eval_trim_eq_eval [LawfulBEq R] (x : R) (p : CPolynomial.Raw R) :
+lemma eval_trim_eq_eval [BEq R] [LawfulBEq R] (x : R) (p : CPolynomial.Raw R) :
     p.trim.eval x = p.eval x := by
   rw [← Raw.toImpl_toPoly, eval_toImpl_eq_eval, eval_toPoly_eq_eval]
 
