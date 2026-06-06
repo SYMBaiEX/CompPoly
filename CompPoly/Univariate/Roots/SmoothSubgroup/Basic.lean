@@ -102,7 +102,7 @@ def smoothCosetLinearFactorsWithSchedule {F : Type*}
     (E : BatchEvalContext F) :
     List Nat → Nat → F → F → CPolynomial F → Array (CPolynomial F)
   | [], order, alpha, gamma, p =>
-      let p := CPolynomial.monicNormalize p
+      let p := CompPoly.monicNormalize p
       if p == 0 || p == 1 then
         #[]
       else if isRepresentedLinearFactor p then
@@ -110,7 +110,7 @@ def smoothCosetLinearFactorsWithSchedule {F : Type*}
       else
         smoothLeafLinearFactors E alpha gamma order p
   | ell :: rest, order, alpha, gamma, p =>
-      let p := CPolynomial.monicNormalize p
+      let p := CompPoly.monicNormalize p
       if p == 0 || p == 1 then
         #[]
       else if isRepresentedLinearFactor p then
@@ -127,7 +127,7 @@ def smoothCosetLinearFactorsWithSchedule {F : Type*}
           (fun factors j ↦
             let beta := alpha ^ childOrder * tau ^ j
             let witness := xPow - CPolynomial.C beta
-            let child := CPolynomial.monicNormalize (CPolynomial.gcdMonic p witness)
+            let child := CompPoly.monicNormalize (CompPoly.gcdMonic p witness)
             if child == 0 || child == 1 then
               factors
             else
@@ -151,13 +151,13 @@ def smoothLinearFactorsAlgorithmWith {F : Type*}
     (M : CPolynomial.Raw.MulContext F) (D : CPolynomial.Raw.ModContext F)
     (E : BatchEvalContext F) (q : Nat) (generator : F) (schedule : Array Nat)
     (p : CPolynomial F) : Array (CPolynomial F) :=
-  let p := CPolynomial.monicNormalize p
+  let p := CompPoly.monicNormalize p
   if p == 0 || p == 1 then
     #[]
   else
     let zeroSplit : Array (CPolynomial F) × CPolynomial F :=
       if p.coeff 0 == 0 then
-        (#[CPolynomial.linearFactor (0 : F)], CPolynomial.monicNormalize (CPolynomial.divX p))
+        (#[CPolynomial.linearFactor (0 : F)], CompPoly.monicNormalize (CPolynomial.divX p))
       else
         (#[], p)
     zeroSplit.1 ++

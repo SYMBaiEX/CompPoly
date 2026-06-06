@@ -95,7 +95,7 @@ def shoupRefineFactorWith {F : Type*}
     (M : CPolynomial.Raw.MulContext F) (D : CPolynomial.Raw.ModContext F)
     (ctx : SmallPrimeTraceContext F) (beta : F) (u : CPolynomial F) :
     Array (CPolynomial F) :=
-  let u := CPolynomial.monicNormalize u
+  let u := CompPoly.monicNormalize u
   if u == 0 || u == 1 then
     #[]
   else if isRepresentedLinearFactor u then
@@ -104,8 +104,8 @@ def shoupRefineFactorWith {F : Type*}
     let tracePoly := traceCoordinatePolynomialWith M D ctx u beta
     ctx.baseConstants.foldl
       (fun children c ↦
-        let child := CPolynomial.monicNormalize
-          (CPolynomial.gcdMonic u (tracePoly - CPolynomial.C c))
+        let child := CompPoly.monicNormalize
+          (CompPoly.gcdMonic u (tracePoly - CPolynomial.C c))
         pushNontrivialChild children child)
       #[]
 
@@ -177,7 +177,7 @@ def shoupSplitCandidatesWith {F : Type*}
     (M : CPolynomial.Raw.MulContext F) (D : CPolynomial.Raw.ModContext F)
     (ctx : SmallPrimeTraceContext F) (p : CPolynomial F) :
     Array (CPolynomial F) :=
-  let p := CPolynomial.monicNormalize p
+  let p := CompPoly.monicNormalize p
   if p == 0 || p == 1 then
     #[]
   else if isRepresentedLinearFactor p then

@@ -150,7 +150,7 @@ theorem finiteFieldRootProductWith_toPoly_eq_normalize_gcd {F : Type*}
     (M : CPolynomial.Raw.MulContext F) (D : CPolynomial.Raw.ModContext F)
     (ctx : FiniteFieldContext F) {p : CPolynomial F}
     (hp : p ≠ 0) :
-    let pMonic := CPolynomial.monicNormalize p
+    let pMonic := CompPoly.monicNormalize p
     (finiteFieldRootProductWith M D ctx p).toPoly =
       normalize (EuclideanDomain.gcd pMonic.toPoly
         (CPolynomial.ofArray
@@ -169,20 +169,24 @@ theorem finiteFieldRootProductWith_toPoly_eq_normalize_gcd {F : Type*}
     exact hpraw (LawfulBEq.eq_of_beq hzero)
   rw [if_neg hpzero]
   have hpMonicVal :
-      (CPolynomial.monicNormalize p).val = CPolynomial.Raw.monicNormalize p.val := by
-    unfold CPolynomial.monicNormalize CPolynomial.ofArray
+      (CompPoly.monicNormalize p).val = CPolynomial.Raw.monicNormalize p.val := by
+    unfold CompPoly.monicNormalize CPolynomial.ofArray
     change (CPolynomial.Raw.monicNormalize p.val).trim =
       CPolynomial.Raw.monicNormalize p.val
     exact raw_monicNormalize_trim p.val
   rw [← hpMonicVal]
   let witnessRaw :=
-    CPolynomial.Raw.xPowSubXModWith M D ctx.q (CPolynomial.monicNormalize p).val
+    CPolynomial.Raw.xPowSubXModWith M D ctx.q (CompPoly.monicNormalize p).val
   have hwitnessTrim : witnessRaw.trim = witnessRaw := by
     dsimp [witnessRaw]
-    exact raw_xPowSubXModWith_trim M D ctx.q (CPolynomial.monicNormalize p).val
-  simpa [CPolynomial.gcdMonic, CPolynomial.ofArray, witnessRaw, hwitnessTrim] using
+    exact raw_xPowSubXModWith_trim M D ctx.q (CompPoly.monicNormalize p).val
+  have hcanon : CPolynomial.Raw.IsCanonical (R := F) witnessRaw := by
+    rw [← hwitnessTrim]
+    exact CPolynomial.Raw.Trim.isCanonical_trim _
+  simpa [CompPoly.gcdMonic, CPolynomial.ofArray, witnessRaw, hwitnessTrim, CPolynomial.toPoly,
+      CPolynomial.Raw.toPoly_trim] using
     CPolynomial.gcdMonic_toPoly_eq_normalize_gcd
-      (CPolynomial.monicNormalize p) (CPolynomial.ofArray witnessRaw)
+      (CompPoly.monicNormalize p) ⟨witnessRaw, hcanon⟩
 
 private theorem raw_gcdMonicWithFuel_trim_ne_zero_of_left {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] :
@@ -216,9 +220,9 @@ private theorem raw_gcdMonicWithFuel_trim_ne_zero_of_left {F : Type*}
 theorem monicNormalize_ne_zero_of_ne_zero {F : Type*}
     [Field F] [BEq F] [LawfulBEq F]
     {p : CPolynomial F} (hp : p ≠ 0) :
-    CPolynomial.monicNormalize p ≠ 0 := by
+    CompPoly.monicNormalize p ≠ 0 := by
   intro hzero
-  unfold CPolynomial.monicNormalize at hzero
+  unfold CompPoly.monicNormalize at hzero
   have hval := congrArg Subtype.val hzero
   simp [CPolynomial.ofArray] at hval
   have hpraw : p.val.trim ≠ (0 : CPolynomial.Raw F) := by
@@ -233,9 +237,9 @@ theorem monicNormalize_ne_zero_of_ne_zero {F : Type*}
 /-- The monic gcd of a nonzero left operand is nonzero. -/
 theorem gcdMonic_ne_zero_of_left {F : Type*} [Field F] [BEq F] [LawfulBEq F]
     {p q : CPolynomial F} (hp : p ≠ 0) :
-    CPolynomial.gcdMonic p q ≠ 0 := by
+    CompPoly.gcdMonic p q ≠ 0 := by
   intro hzero
-  unfold CPolynomial.gcdMonic at hzero
+  unfold CompPoly.gcdMonic at hzero
   have hval := congrArg Subtype.val hzero
   simp [CPolynomial.ofArray] at hval
   have hpraw : p.val.trim ≠ (0 : CPolynomial.Raw F) := by

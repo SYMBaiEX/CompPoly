@@ -143,8 +143,8 @@ theorem shoup_gcdBucket_root {F : Type*}
     (hroot : CPolynomial.eval a u = 0)
     (htrace : ctx.traceValue (beta * a) = c) :
     CPolynomial.eval a
-        (CPolynomial.monicNormalize
-          (CPolynomial.gcdMonic u
+        (CompPoly.monicNormalize
+          (CompPoly.gcdMonic u
             (traceCoordinatePolynomialWith M D ctx u beta - CPolynomial.C c))) = 0 := by
   let witness := traceCoordinatePolynomialWith M D ctx u beta - CPolynomial.C c
   have hwitnessRoot : CPolynomial.eval a witness = 0 := by
@@ -161,13 +161,13 @@ theorem shoup_gcdBucket_root_iff {F : Type*}
     (ctx : SmallPrimeTraceContext F) {u : CPolynomial F} {a beta c : F}
     (hu : u ≠ 0) :
     CPolynomial.eval a
-        (CPolynomial.monicNormalize
-          (CPolynomial.gcdMonic u
+        (CompPoly.monicNormalize
+          (CompPoly.gcdMonic u
             (traceCoordinatePolynomialWith M D ctx u beta - CPolynomial.C c))) = 0 ↔
       CPolynomial.eval a u = 0 ∧ ctx.traceValue (beta * a) = c := by
   letI : DecidableEq F := instDecidableEqOfLawfulBEq
   let witness := traceCoordinatePolynomialWith M D ctx u beta - CPolynomial.C c
-  have hgcdNe : CPolynomial.gcdMonic u witness ≠ 0 := gcdMonic_ne_zero_of_left hu
+  have hgcdNe : CompPoly.gcdMonic u witness ≠ 0 := gcdMonic_ne_zero_of_left hu
   rw [monicNormalize_root_iff hgcdNe, gcdMonic_root_iff_left_right]
   constructor
   · intro h
@@ -188,15 +188,15 @@ theorem shoup_gcdBucket_root_iff {F : Type*}
 private theorem monicNormalize_toPoly_dvd_self {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (p : CPolynomial F) :
-    (CPolynomial.monicNormalize p).toPoly ∣ p.toPoly := by
-  rw [CPolynomial.monicNormalize_toPoly_eq_normalize]
+    (CompPoly.monicNormalize p).toPoly ∣ p.toPoly := by
+  rw [CompPoly.monicNormalize_toPoly_eq_normalize]
   exact (normalize_associated p.toPoly).dvd
 
 private theorem gcdMonic_toPoly_dvd_left {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (p q : CPolynomial F) :
-    (CPolynomial.gcdMonic p q).toPoly ∣ p.toPoly := by
-  rw [CPolynomial.gcdMonic_toPoly_eq_normalize_gcd]
+    (CompPoly.gcdMonic p q).toPoly ∣ p.toPoly := by
+  rw [CompPoly.gcdMonic_toPoly_eq_normalize_gcd]
   exact (normalize_associated (EuclideanDomain.gcd p.toPoly q.toPoly)).dvd.trans
     (EuclideanDomain.gcd_dvd_left p.toPoly q.toPoly)
 
@@ -255,8 +255,8 @@ private theorem shoupRefineBaseConstants_root {F : Type*}
           factor ∈
               (constants.foldl
                 (fun children c ↦
-                  let child := CPolynomial.monicNormalize
-                    (CPolynomial.gcdMonic u
+                  let child := CompPoly.monicNormalize
+                    (CompPoly.gcdMonic u
                       (traceCoordinatePolynomialWith M D ctx u beta - CPolynomial.C c))
                   pushNontrivialChild children child)
                 acc).toList ∧
@@ -281,14 +281,14 @@ private theorem shoupRefineBaseConstants_root {F : Type*}
         rcases hmem with htarget | htail
         · left
           subst c
-          let child := CPolynomial.monicNormalize
-            (CPolynomial.gcdMonic u
+          let child := CompPoly.monicNormalize
+            (CompPoly.gcdMonic u
               (traceCoordinatePolynomialWith M D ctx u beta -
                 CPolynomial.C (ctx.traceValue (beta * a))))
           have hchildRoot : CPolynomial.eval a child = 0 := by
             dsimp [child]
             exact shoup_gcdBucket_root M D ctx hroot rfl
-          have hgcdNe : CPolynomial.gcdMonic u
+          have hgcdNe : CompPoly.gcdMonic u
               (traceCoordinatePolynomialWith M D ctx u beta -
                 CPolynomial.C (ctx.traceValue (beta * a))) ≠ 0 :=
             gcdMonic_ne_zero_of_left hu
@@ -313,8 +313,8 @@ private theorem shoupRefineBaseConstants_dvd {F : Type*}
           factor ∈
               (constants.foldl
                 (fun children c ↦
-                  let child := CPolynomial.monicNormalize
-                    (CPolynomial.gcdMonic u
+                  let child := CompPoly.monicNormalize
+                    (CompPoly.gcdMonic u
                       (traceCoordinatePolynomialWith M D ctx u beta - CPolynomial.C c))
                   pushNontrivialChild children child)
                 acc).toList →
@@ -329,15 +329,15 @@ private theorem shoupRefineBaseConstants_dvd {F : Type*}
       intro acc hacc factor hmem
       simp only [List.foldl_cons] at hmem
       apply ih (pushNontrivialChild acc
-        (CPolynomial.monicNormalize
-          (CPolynomial.gcdMonic u
+        (CompPoly.monicNormalize
+          (CompPoly.gcdMonic u
             (traceCoordinatePolynomialWith M D ctx u beta - CPolynomial.C c))))
       · intro factor hfactor
         rcases mem_pushNontrivialChild hfactor with hold | hnew
         · exact hacc factor hold
         · subst factor
           exact (monicNormalize_toPoly_dvd_self
-            (CPolynomial.gcdMonic u
+            (CompPoly.gcdMonic u
               (traceCoordinatePolynomialWith M D ctx u beta - CPolynomial.C c))).trans
             (gcdMonic_toPoly_dvd_left u
               (traceCoordinatePolynomialWith M D ctx u beta - CPolynomial.C c))
@@ -353,7 +353,7 @@ private theorem shoupRefineFactorWith_root {F : Type*}
         factor ≠ 0 ∧
         CPolynomial.eval a factor = 0 := by
   unfold shoupRefineFactorWith
-  let u' := CPolynomial.monicNormalize u
+  let u' := CompPoly.monicNormalize u
   have hu' : u' ≠ 0 := monicNormalize_ne_zero_of_ne_zero hu
   have hroot' : CPolynomial.eval a u' = 0 := (monicNormalize_root_iff hu).2 hroot
   by_cases hzero : (u' == 0 || u' == 1) = true
@@ -382,7 +382,7 @@ private theorem shoupRefineFactorWith_dvd {F : Type*}
     factor.toPoly ∣ u.toPoly := by
   letI : DecidableEq F := instDecidableEqOfLawfulBEq
   unfold shoupRefineFactorWith at hmem
-  let u' := CPolynomial.monicNormalize u
+  let u' := CompPoly.monicNormalize u
   by_cases hzero : (u' == 0 || u' == 1) = true
   · rw [if_pos hzero] at hmem
     simp at hmem
@@ -581,8 +581,8 @@ private theorem representedLinearFactor_root_unique {F : Type*}
 
 private theorem monicNormalize_zero {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] :
-    CPolynomial.monicNormalize (0 : CPolynomial F) = 0 := by
-  unfold CPolynomial.monicNormalize CPolynomial.Raw.monicNormalize CPolynomial.ofArray
+    CompPoly.monicNormalize (0 : CPolynomial F) = 0 := by
+  unfold CompPoly.monicNormalize CPolynomial.Raw.monicNormalize CPolynomial.ofArray
   apply Subtype.ext
   change
     (if ((0 : CPolynomial F).val : CPolynomial.Raw F).trim == 0 then
@@ -619,7 +619,7 @@ private theorem rootsAgreeOn_monicNormalize {F : Type*}
     [Field F] [BEq F] [LawfulBEq F]
     (ctx : SmallPrimeTraceContext F) (coords : List F) {u : CPolynomial F}
     (hu : u ≠ 0) (huAgree : rootsAgreeOn ctx coords u) :
-  rootsAgreeOn ctx coords (CPolynomial.monicNormalize u) := by
+  rootsAgreeOn ctx coords (CompPoly.monicNormalize u) := by
   intro a b hrootA hrootB beta hbeta
   exact huAgree a b ((monicNormalize_root_iff hu).1 hrootA)
     ((monicNormalize_root_iff hu).1 hrootB) beta hbeta
@@ -637,8 +637,8 @@ private theorem shoupRefineBaseConstants_rootsAgreeOn {F : Type*}
           factor ∈
               (constants.foldl
                 (fun children c ↦
-                  let child := CPolynomial.monicNormalize
-                    (CPolynomial.gcdMonic u
+                  let child := CompPoly.monicNormalize
+                    (CompPoly.gcdMonic u
                       (traceCoordinatePolynomialWith M D ctx u beta - CPolynomial.C c))
                   pushNontrivialChild children child)
                 acc).toList →
@@ -652,8 +652,8 @@ private theorem shoupRefineBaseConstants_rootsAgreeOn {F : Type*}
       intro acc hacc factor hmem
       simp only [List.foldl_cons] at hmem
       apply ih (pushNontrivialChild acc
-        (CPolynomial.monicNormalize
-          (CPolynomial.gcdMonic u
+        (CompPoly.monicNormalize
+          (CompPoly.gcdMonic u
             (traceCoordinatePolynomialWith M D ctx u beta - CPolynomial.C c))))
       · intro factor hfactor
         rcases mem_pushNontrivialChild hfactor with hold | hnew
@@ -682,7 +682,7 @@ private theorem shoupRefineFactorWith_rootsAgreeOn {F : Type*}
     (hmem : factor ∈ (shoupRefineFactorWith M D ctx beta u).toList) :
     rootsAgreeOn ctx (coords ++ [beta]) factor := by
   unfold shoupRefineFactorWith at hmem
-  let u' := CPolynomial.monicNormalize u
+  let u' := CompPoly.monicNormalize u
   by_cases hzero : (u' == 0 || u' == 1) = true
   · rw [if_pos hzero] at hmem
     simp at hmem
@@ -704,7 +704,7 @@ private theorem shoupRefineFactorWith_rootsAgreeOn {F : Type*}
       have hu : u ≠ 0 := by
         intro hz
         subst u
-        exact hu' (by simpa [u'] using (monicNormalize_zero : CPolynomial.monicNormalize
+        exact hu' (by simpa [u'] using (monicNormalize_zero : CompPoly.monicNormalize
           (0 : CPolynomial F) = 0))
       have huAgree' : rootsAgreeOn ctx coords u' :=
         rootsAgreeOn_monicNormalize ctx coords hu huAgree
@@ -800,7 +800,7 @@ theorem shoupSplitCandidatesWith_root {F : Type*}
         factor ≠ 0 ∧
         CPolynomial.eval a factor = 0 := by
   unfold shoupSplitCandidatesWith
-  let p' := CPolynomial.monicNormalize p
+  let p' := CompPoly.monicNormalize p
   have hp' : p' ≠ 0 := monicNormalize_ne_zero_of_ne_zero hp
   have hroot' : CPolynomial.eval a p' = 0 := (monicNormalize_root_iff hp).2 hroot
   by_cases hzero : (p' == 0 || p' == 1) = true
@@ -829,7 +829,7 @@ theorem shoupSplitCandidatesWith_dvd_input {F : Type*}
     factor.toPoly ∣ p.toPoly := by
   letI : DecidableEq F := instDecidableEqOfLawfulBEq
   unfold shoupSplitCandidatesWith at hmem
-  let p' := CPolynomial.monicNormalize p
+  let p' := CompPoly.monicNormalize p
   by_cases hzero : (p' == 0 || p' == 1) = true
   · rw [if_pos hzero] at hmem
     simp at hmem
@@ -904,7 +904,7 @@ private theorem shoupSplitCandidatesWith_root_unique {F : Type*}
     (hrootB : CPolynomial.eval b factor = 0) :
     b = a := by
   unfold shoupSplitCandidatesWith at hmem
-  let p' := CPolynomial.monicNormalize p
+  let p' := CompPoly.monicNormalize p
   by_cases hzero : (p' == 0 || p' == 1) = true
   · rw [if_pos hzero] at hmem
     simp at hmem
@@ -1067,8 +1067,8 @@ private theorem raw_monicNormalize_toPoly_eq_normalize {F : Type*}
     (p : CPolynomial.Raw F) :
     (CPolynomial.ofArray (CPolynomial.Raw.monicNormalize p)).toPoly =
       normalize (CPolynomial.ofArray p).toPoly := by
-  have h := CPolynomial.monicNormalize_toPoly_eq_normalize (CPolynomial.ofArray p)
-  unfold CPolynomial.monicNormalize at h
+  have h := CompPoly.monicNormalize_toPoly_eq_normalize (CPolynomial.ofArray p)
+  unfold CompPoly.monicNormalize at h
   unfold CPolynomial.ofArray at h
   rw [raw_monicNormalize_trim_arg] at h
   exact h
@@ -1357,7 +1357,7 @@ theorem finiteFieldRootProductWith_dvd_frobenius {F : Type*}
   letI : DecidableEq F := instDecidableEqOfLawfulBEq
   rw [finiteFieldRootProductWith_toPoly_eq_normalize_gcd M D ctx.toFiniteFieldContext _hp]
   apply dvd_trans (normalize_associated _).dvd
-  let pMonic := CPolynomial.monicNormalize p
+  let pMonic := CompPoly.monicNormalize p
   let witness :=
     (CPolynomial.ofArray
       (CPolynomial.Raw.xPowSubXModWith M D ctx.q pMonic.val)).toPoly
@@ -1369,7 +1369,7 @@ theorem finiteFieldRootProductWith_dvd_frobenius {F : Type*}
     (CPolynomial.toPoly_eq_zero_iff p).not.mpr _hp
   have hpMonicPoly : pMonic.toPoly.Monic := by
     dsimp [pMonic]
-    rw [CPolynomial.monicNormalize_toPoly_eq_normalize]
+    rw [CompPoly.monicNormalize_toPoly_eq_normalize]
     exact Polynomial.monic_normalize hpPoly
   have hpMonicNe : pMonic ≠ 0 := monicNormalize_ne_zero_of_ne_zero _hp
   have hmod : pMonic.val.trim ≠ 0 := by
