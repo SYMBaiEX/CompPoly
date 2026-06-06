@@ -93,6 +93,7 @@ import CompPoly.ToMathlib.Polynomial.BivariateWeightedDegree
 import CompPoly.ToMathlib.Polynomial.Div
 import CompPoly.Univariate.Barycentric
 import CompPoly.Univariate.Basic
+import CompPoly.Univariate.Division
 import CompPoly.Univariate.BatchEval
 import CompPoly.Univariate.BatchEval.Context
 import CompPoly.Univariate.BatchEval.Correctness
