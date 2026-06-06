@@ -21,37 +21,14 @@ section Division
 
 variable {R : Type*} [BEq R] [LawfulBEq R] [CommRing R]
 
-/-! Lemmas required to prove the termination of CPolynomial.Raw.divModByMonicAux -/
+/-! Lemmas required to prove the termination of CPolynomial.Raw.divModByMonicAux.
 
-omit [BEq R] [LawfulBEq R] in
-/-- `toPoly` respects negation for Raw polynomials -/
-lemma toPoly_neg (p : CPolynomial.Raw R) :
-    (-p).toPoly = -p.toPoly := by
-  ext n
-  simp only [coeff_toPoly, Polynomial.coeff_neg]
-  exact neg_coeff p n
-
-/-- `toPoly` respects subtraction for Raw polynomials -/
-lemma toPoly_sub (p q : CPolynomial.Raw R) :
-    (p - q).toPoly = p.toPoly - q.toPoly := by
-  have h_sub : (p - q).toPoly = p.toPoly + (-q).toPoly := by
-    have h_add : (p + (-q)).toPoly = p.toPoly + (-q).toPoly := by
-      grind
-    convert h_add using 1
-  rw [ h_sub, toPoly_neg, sub_eq_add_neg ]
-
-/-- `toPoly` respects multiplication for Raw polynomials -/
-lemma toPoly_mul (p q : CPolynomial.Raw R) :
-    (p * q).toPoly = p.toPoly * q.toPoly := by
-  convert toPoly_mul_coeff p q using 1
-  simp [ Polynomial.ext_iff, Polynomial.coeff_mul ]
-
-/-- `toPoly` respects exponentiation by naturals for Raw polynomials -/
-lemma toPoly_pow (p : CPolynomial.Raw R) (n : ℕ) :
-    (p ^ n).toPoly = p.toPoly ^ n := by
-  induction' n with n ih generalizing p <;> simp_all [ pow_succ ]
-  · convert toPoly_one
-  · rw [ pow_succ', toPoly_mul, ih ]
+The `toPoly` ring-homomorphism bridges (`toPoly_neg`, `toPoly_sub`, `toPoly_mul`,
+`toPoly_pow`, `toPoly_C`, `toPoly_X`, `toPoly_one`, `toPoly_zero`) are provided by
+`CompPoly.Univariate.ToPoly.Raw`, which sits below the `Raw.Proofs`/`Raw.Division`
+import cycle. They were previously re-declared here against helper lemmas
+(`neg_coeff`, `toPoly_mul_coeff`) that live in `Raw.Proofs`/`ToPoly.Equiv` and are
+not importable from this module without creating a cycle. -/
 
 /-- The trim of a Raw polynomial is empty if and only if it is `0` -/
 lemma trim_size_zero_iff_toPoly_zero (p : CPolynomial.Raw R) :
@@ -59,9 +36,9 @@ lemma trim_size_zero_iff_toPoly_zero (p : CPolynomial.Raw R) :
   constructor <;> intro h
   · rw [ ← toPoly_trim ]; aesop
   · have h_trim_zero : p.trim = 0 := by
-      convert toImpl_toPoly p
-      · convert toImpl_toPoly p |> Eq.symm
-      · convert toImpl_toPoly p
+      convert Raw.toImpl_toPoly p
+      · convert Raw.toImpl_toPoly p |> Eq.symm
+      · convert Raw.toImpl_toPoly p
         unfold toPoly at *; aesop
     aesop
 
@@ -80,7 +57,7 @@ lemma trim_size_eq_natDegree_succ (p : CPolynomial.Raw R) (hp : p.toPoly ≠ 0) 
   obtain ⟨q, hq⟩ : ∃ q : Polynomial R, p.toPoly = q ∧ q ≠ 0 := by
     use p.toPoly
   have h_trim_size_eq : p.toPoly.toImpl = p.trim := by
-    exact toImpl_toPoly p
+    exact Raw.toImpl_toPoly p
   rw [ ← h_trim_size_eq, hq.1 ]
   unfold Polynomial.toImpl
   cases h : q.degree <;> simp_all [ Polynomial.natDegree ]
@@ -310,9 +287,16 @@ def modByMonicByReversal [Field R] [LawfulBEq R] (M : MulLowContext R)
 def div [Field R] (p q : CPolynomial.Raw R) : CPolynomial.Raw R :=
   (C (q.leadingCoeff)⁻¹ • p).divByMonic (C (q.leadingCoeff)⁻¹ * q)
 
-/-- Modulus of two `CPolynomial.Raw`s. -/
+/-- Modulus of two `CPolynomial.Raw`s.
+
+  The result is trimmed so that it is always canonical (matching `div`, whose
+  underlying `divByMonic` already returns canonical output). `modByMonic` returns its
+  first argument unchanged in the base case, which need not be canonical, so the final
+  `trim` is required for `mod_canonical` to hold unconditionally. Trimming does not
+  change the `toPoly` image (`toPoly_trim`), so the `mod_toPoly` specification is
+  unaffected. -/
 def mod [Field R] (p q : CPolynomial.Raw R) : CPolynomial.Raw R :=
-  p.modByMonic (C (q.leadingCoeff)⁻¹ * q)
+  (p.modByMonic (C (q.leadingCoeff)⁻¹ * q)).trim
 
 instance [Field R] : Div (CPolynomial.Raw R) := ⟨div⟩
 instance [Field R] : Mod (CPolynomial.Raw R) := ⟨mod⟩
@@ -517,7 +501,7 @@ lemma Polynomial.C_mul_divByMonic_eq (a : R) (p q : Polynomial R) (hq : q.Monic)
   · exact (Polynomial.div_modByMonic_unique _ _ hq ⟨by
       calc Polynomial.C a * (p %ₘ q) + q * (Polynomial.C a * (p /ₘ q))
           = Polynomial.C a * ((p %ₘ q) + q * (p /ₘ q)) := by ring
-        _ = Polynomial.C a * p := by rw [Polynomial.modByMonic_add_div p hq],
+        _ = Polynomial.C a * p := by rw [Polynomial.modByMonic_add_div p q],
       by rw [Polynomial.degree_C_mul ha]; exact Polynomial.degree_modByMonic_lt p hq⟩).1
 
 omit [Field R] in
@@ -570,6 +554,7 @@ theorem div_toPoly (p q : CPolynomial.Raw R) :
 theorem mod_toPoly (p q : CPolynomial.Raw R) (hq : q.toPoly ≠ 0) :
     (mod p q).toPoly = (Polynomial.mod p.toPoly q.toPoly) := by
   unfold mod
+  rw [toPoly_trim]
   rw [modByMonic_toPoly _ _ (monic_raw_of_toPoly_ne_zero q hq)]
   rw [toPoly_mul, toPoly_C, leadingCoeff_toPoly]
   simp only [Polynomial.mod]

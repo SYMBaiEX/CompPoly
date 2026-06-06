@@ -19,7 +19,7 @@ variable {R : Type*}
 noncomputable def toPoly [Zero R] [Semiring R] (p : CPolynomial R) : Polynomial R := p.val.toPoly
 
 /-- `ofArray` preserves the raw polynomial's `toPoly` image. -/
-theorem ofArray_toPoly [LawfulBEq R] (p : CPolynomial.Raw R) :
+theorem ofArray_toPoly [Semiring R] [BEq R] [LawfulBEq R] (p : CPolynomial.Raw R) :
     (CPolynomial.ofArray p).toPoly = p.toPoly := by
   unfold CPolynomial.ofArray
   exact Raw.toPoly_trim
@@ -28,22 +28,23 @@ theorem ofArray_toPoly [LawfulBEq R] (p : CPolynomial.Raw R) :
 
   This shows `toPoly` is a bijection from `CPolynomial R` to `Polynomial R`. -/
 @[grind =]
-lemma toImpl_toPoly_of_canonical [LawfulBEq R] (p : CPolynomial R) : p.toPoly.toImpl = p := by
+lemma toImpl_toPoly_of_canonical [Semiring R] [BEq R] [LawfulBEq R] (p : CPolynomial R) :
+    p.toPoly.toImpl = p := by
   suffices h_inj : ∀ q : CPolynomial R, p.toPoly = q.toPoly → p = q by
-    have : p.toPoly = p.toPoly.toImpl.toPoly := by rw [toPoly_toImpl]
+    have : p.toPoly = p.toPoly.toImpl.toPoly := by rw [Raw.toPoly_toImpl]
     exact
-      h_inj ⟨p.toPoly.toImpl, isCanonical_toImpl p.toPoly⟩ this
+      h_inj ⟨p.toPoly.toImpl, Raw.isCanonical_toImpl p.toPoly⟩ this
         |> congrArg Subtype.val
         |>.symm
   intro q hpq
   apply CPolynomial.ext
-  apply Trim.isCanonical_ext p.property q.property
+  apply Raw.Trim.isCanonical_ext p.property q.property
   intro i
-  rw [← coeff_toPoly, ← coeff_toPoly]
+  rw [← Raw.coeff_toPoly, ← Raw.coeff_toPoly]
   exact hpq |> congrArg (fun p => p.coeff i)
 
 /-- `toPoly` maps a canonical polynomial to `0` iff the polynomial is `0`. -/
-theorem toPoly_eq_zero_iff [LawfulBEq R] (p : CPolynomial R) :
+theorem toPoly_eq_zero_iff [Semiring R] [BEq R] [LawfulBEq R] (p : CPolynomial R) :
     p.toPoly = 0 ↔ p = 0 := by
   constructor
   · intro hp
