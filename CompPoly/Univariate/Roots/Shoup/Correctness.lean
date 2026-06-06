@@ -189,14 +189,14 @@ private theorem monicNormalize_toPoly_dvd_self {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (p : CPolynomial F) :
     (CompPoly.monicNormalize p).toPoly ∣ p.toPoly := by
-  rw [CompPoly.monicNormalize_toPoly_eq_normalize]
+  rw [CPolynomial.monicNormalize_toPoly_eq_normalize]
   exact (normalize_associated p.toPoly).dvd
 
 private theorem gcdMonic_toPoly_dvd_left {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] [DecidableEq F]
     (p q : CPolynomial F) :
     (CompPoly.gcdMonic p q).toPoly ∣ p.toPoly := by
-  rw [CompPoly.gcdMonic_toPoly_eq_normalize_gcd]
+  rw [CPolynomial.gcdMonic_toPoly_eq_normalize_gcd]
   exact (normalize_associated (EuclideanDomain.gcd p.toPoly q.toPoly)).dvd.trans
     (EuclideanDomain.gcd_dvd_left p.toPoly q.toPoly)
 
@@ -1067,7 +1067,7 @@ private theorem raw_monicNormalize_toPoly_eq_normalize {F : Type*}
     (p : CPolynomial.Raw F) :
     (CPolynomial.ofArray (CPolynomial.Raw.monicNormalize p)).toPoly =
       normalize (CPolynomial.ofArray p).toPoly := by
-  have h := CompPoly.monicNormalize_toPoly_eq_normalize (CPolynomial.ofArray p)
+  have h := CPolynomial.monicNormalize_toPoly_eq_normalize (CPolynomial.ofArray p)
   unfold CompPoly.monicNormalize at h
   unfold CPolynomial.ofArray at h
   rw [raw_monicNormalize_trim_arg] at h
@@ -1369,7 +1369,7 @@ theorem finiteFieldRootProductWith_dvd_frobenius {F : Type*}
     (CPolynomial.toPoly_eq_zero_iff p).not.mpr _hp
   have hpMonicPoly : pMonic.toPoly.Monic := by
     dsimp [pMonic]
-    rw [CompPoly.monicNormalize_toPoly_eq_normalize]
+    rw [CPolynomial.monicNormalize_toPoly_eq_normalize]
     exact Polynomial.monic_normalize hpPoly
   have hpMonicNe : pMonic ≠ 0 := monicNormalize_ne_zero_of_ne_zero _hp
   have hmod : pMonic.val.trim ≠ 0 := by
