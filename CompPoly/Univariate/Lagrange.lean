@@ -271,6 +271,17 @@ lemma eval_interpolatePow_at_node {n : ℕ} {ω : Rˣ} {r : Vector R n} : n ≤ 
     exact congr_arg Fin.val h_eq
   · exact Finset.mem_univ _
 
+lemma interpolation_of_constants {ι : Type*} [DecidableEq ι] (s : Finset ι) (x y : ι → R) (c : R)
+    (hy : ∀ i ∈ s, y i = c) (hx : Set.InjOn x s) (hs : s.Nonempty) :
+    interpolate s x y = CPolynomial.C c := by
+  suffices h : (interpolate s x y).toPoly = (CPolynomial.C c).toPoly from
+    CPolynomial.ringEquiv.injective h
+  rw [cinterpolate_eq_interpolate, CPolynomial.C_toPoly]
+  symm
+  exact Lagrange.eq_interpolate_of_eval_eq y hx
+    (lt_of_le_of_lt Polynomial.degree_C_le (by exact_mod_cast Finset.card_pos.mpr hs))
+    (fun i hi => by simp [hy i hi])
+
 end CLagrange
 
 end CPolynomial
