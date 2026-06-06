@@ -312,190 +312,7 @@ section PolynomialIsomorphism
 noncomputable def toPoly {w : Nat} (v : BitVec w) : (ZMod 2)[X] :=
   ∑ i : Fin w, if v.getLsb i then X^i.val else 0
 
-lemma BitVec.eq_of_xor_eq_zero {w : Nat} {x y : BitVec w} (h : x ^^^ y = 0) : x = y := by
-  ext i
-  have h_get := congrArg (fun v => v.getLsbD i) h
-  simp only [BitVec.xor_eq, BitVec.getLsbD_xor, BitVec.getLsbD_zero] at h_get
-  exact Bool.bne_eq_false_iff_eq.mp h_get
 
-lemma toPoly_injective {w : Nat} (x y : BitVec w) : toPoly x = toPoly y ↔ x = y := by
-  have h_xor : toPoly (x ^^^ y) = toPoly x + toPoly y := toPoly_xor x y
-  constructor
-  · intro h
-    rw [h, CharTwo.add_self_eq_zero] at h_xor
-    have h_ne : x ^^^ y = 0 := by
-      by_contra hc
-      have hc' : toPoly (x ^^^ y) ≠ 0 := (toPoly_ne_zero_iff_ne_zero (x ^^^ y)).mpr hc
-      exact hc' h_xor
-    exact BitVec.eq_of_xor_eq_zero h_ne
-  · intro h
-    rw [h]
-
-lemma getLsb_zeroExtend {w v : Nat} (x : BitVec w) (i : Fin v) :
-    (x.zeroExtend v).getLsb i = (if h : i.val < w then x.getLsb ⟨i.val, h⟩ else false) := by
-  simp only [BitVec.getLsb, BitVec.toNat_zeroExtend]
-  rw [Nat.testBit_mod_two_pow _ _ _ i.isLt]
-  split_ifs with h
-  · rfl
-  · rw [Nat.testBit_eq_false_of_lt]
-    have := BitVec.isLt x
-    have h_pow : 2^w ≤ 2^i.val := Nat.pow_le_pow_right (by decide) (by omega)
-    omega
-
-lemma getLsb_ushr {w : Nat} (x : BitVec w) (n : Nat) (i : Fin (w - n)) :
-    (x >>> n).getLsb ⟨i.val, by omega⟩ = x.getLsb ⟨i.val + n, by omega⟩ := by
-  simp only [BitVec.getLsb, BitVec.toNat_ushr]
-  rw [Nat.testBit_div_two_pow]
-
-lemma toPoly_split (a : B128) :
-    toPoly a = toPoly (a.zeroExtend 64) + toPoly ((a >>> 64).zeroExtend 64) * X^64 := by
-  ext i
-  rw [Polynomial.coeff_add, Polynomial.coeff_mul_X_pow']
-  rw [toPoly_coeff, toPoly_coeff, toPoly_coeff]
-  by_cases hi : i < 128
-  · simp only [dif_pos hi]
-    by_cases hi64 : i < 64
-    · have h1 : i < 64 := hi64
-      have h2 : i - 64 < 64 := by omega
-      simp only [dif_pos h1, show ¬(64 ≤ i) by omega, ↓reduceIte, add_zero]
-      rw [getLsb_zeroExtend]
-      simp only [h1, ↓reduceIte]
-    · have h1 : ¬(i < 64) := hi64
-      have h2 : i - 64 < 64 := by omega
-      simp only [show ¬(i < 64) by omega, dif_neg h1, dif_pos h2, show 64 ≤ i by omega, zero_add]
-      rw [getLsb_zeroExtend]
-      simp only [h2, ↓reduceIte]
-      have h_get := getLsb_ushr a 64 ⟨i - 64, h2⟩
-      simp only at h_get
-      rw [h_get]
-      congr 2
-      omega
-  · have h1 : ¬(i < 128) := hi
-    have h2 : ¬(i < 64) := by omega
-    simp only [dif_neg h1, dif_neg h2]
-    by_cases hs : 64 ≤ i
-    · by_cases h3 : i - 64 < 64
-      · omega
-      · simp fontified only [dif_neg h3, add_zero]
-    · omega
-
-lemma toPoly_64_extend_128 (a : BitVec 64) :
-    toPoly (BitVec.zeroExtend 128 a) = toPoly a := by
-  unfold toPoly
-  let f : Fin 128 → Polynomial (ZMod 2) :=
-    fun i => if (BitVec.zeroExtend 128 a).getLsb i then X ^ i.val else 0
-  have h_split_128: 128 = 64 + 64 := by rfl
-  rw! (castMode := .all) [h_split_128]
-  rw [Fin.sum_univ_add]
-  rw [←Finset.sum_add_distrib]
-  simp only [Nat.reduceAdd, Fin.natAdd_eq_addNat]
-  apply Finset.sum_congr (h := by rfl)
-  intro (i : Fin 64) hi_mem_univ
-  dsimp only [BitVec.getLsb]
-  simp only [BitVec.toNat_zeroExtend, Fin.val_castAdd, Fin.val_addNat]
-  have h_mod : a.toNat % 2^128 = a.toNat := by
-    rw [Nat.mod_eq_of_lt (by linarith [BitVec.isLt a, show 2^64 < (2^128 : ℕ) by decide])]
-  rw [h_mod]
-  have h_toNat_lt := BitVec.toNat_lt_twoPow_of_le (n := i.val + 64) (x := a) (h := by omega)
-  have h_testBit_false : (BitVec.toNat a).testBit (↑i + 64) = false :=
-    Nat.testBit_lt_two_pow h_toNat_lt
-  simp only [h_testBit_false, Bool.false_eq_true, ↓reduceIte, add_zero]
-  rfl
-
-lemma clMul64_unfold (a b : BitVec 64) :
-    clMul64 a b = Fin.foldl 64
-      (fun acc i => acc ^^^ (if a.getLsbD i
-        then BitVec.zeroExtend 128 b <<< (i : Nat) else 0)) (0 : BitVec 128) := by
-    unfold clMul64
-    congr
-    funext acc i
-    cases h : BitVec.getLsbD a i
-    · simp
-    · simp
-
-lemma toPoly_clMul64 (a b : BitVec 64) :
-    toPoly (clMul64 a b) = toPoly a * toPoly b := by
-    rw [clMul64_unfold]
-    rw [toPoly_fold_xor (f := fun k => if a.getLsbD k = true then BitVec.zeroExtend 128 b <<< k else 0)]
-    conv_rhs => enter [1]; unfold toPoly
-    unfold BitVec.getLsb
-    rw [Fin.sum_univ_eq_sum_range
-      (f := fun i => if (BitVec.toNat a).testBit i = true
-        then X ^ i else 0)]
-    rw [Finset.sum_mul]
-    apply Finset.sum_congr rfl
-    intro i hi
-    simp only [Finset.mem_range] at hi
-    unfold BitVec.getLsbD
-    split_ifs
-    · have ha_proof : (BitVec.zeroExtend 128 b).toNat < 2 ^ 64 := by
-           rw [BitVec.toNat_zeroExtend]
-           have := BitVec.isLt b
-           rw [Nat.mod_eq_of_lt (by linarith [this, show 2^64 < (2^128 : ℕ) by decide])]
-           exact this
-      have h_no_overflow_proof : 64 + i ≤ 128 := by
-           omega
-      rw  [toPoly_shiftLeft_no_overflow (d := 64) (BitVec.zeroExtend 128 b)
-                                         (ha := ha_proof)
-                                         (h_no_overflow := h_no_overflow_proof)]
-      rw [toPoly_64_extend_128]
-      ring
-    · simp [toPoly_zero_eq_zero]
-
-lemma toPoly_extend_shift {shift : Nat} (x : BitVec 128) (h_shift : 128 + shift ≤ 256) :
-    toPoly (BitVec.zeroExtend 256 x <<< shift) = toPoly x * X^shift := by
-  have ha_proof : (BitVec.zeroExtend 256 x).toNat < 2 ^ 128 := by
-    rw [BitVec.toNat_zeroExtend]
-    rw [Nat.mod_eq_of_lt (by linarith [BitVec.isLt x, show 2^128 < (2^256 : ℕ) by decide])]
-    exact BitVec.isLt x
-  rw [toPoly_shiftLeft_no_overflow (d := 128) (BitVec.zeroExtend 256 x) (ha := ha_proof) (h_no_overflow := h_shift)]
-  rw [toPoly_128_extend_256]
-
-lemma toPoly_clMul (a b : B128) :
-    toPoly (clMul a b) = toPoly a * toPoly b := by
-  unfold clMul
-  dsimp only
-  rw [toPoly_xor, toPoly_xor]
-  have h_l_val := clMul64 (a.zeroExtend 64) (b.zeroExtend 64)
-  have h_h_val := clMul64 ((a >>> 64).zeroExtend 64) ((b >>> 64).zeroExtend 64)
-  have h_m_val := clMul64 (((a >>> 64).zeroExtend 64) ^^^ (a.zeroExtend 64)) (((b >>> 64).zeroExtend 64) ^^^ (b.zeroExtend 64))
-  have h_shift128 : toPoly (BitVec.zeroExtend 256 h_h_val <<< 128) = toPoly h_h_val * X^128 := by
-    apply toPoly_extend_shift; decide
-  have h_shift64 : toPoly (BitVec.zeroExtend 256 (h_m_val ^^^ h_h_val ^^^ h_l_val) <<< 64) =
-      toPoly (h_m_val ^^^ h_h_val ^^^ h_l_val) * X^64 := by
-    apply toPoly_extend_shift; decide
-  have h_l_extend : toPoly (BitVec.zeroExtend 256 h_l_val) = toPoly h_l_val := by
-    exact toPoly_128_extend_256 h_l_val
-  rw [h_shift128, h_shift64, h_l_extend]
-  rw [toPoly_xor, toPoly_xor]
-  rw [toPoly_clMul64, toPoly_clMul64, toPoly_clMul64]
-  rw [toPoly_split a, toPoly_split b]
-  ring
-
-lemma clMulSpec_unfold (a b : B128) :
-    clMulSpec a b = Fin.foldl 128
-      (fun acc i => acc ^^^ (if a.getLsbD i
-        then to256 b <<< (i : Nat) else 0)) (0 : B256) := by
-    unfold clMulSpec
-    congr
-    funext acc i
-    cases h : BitVec.getLsbD a i
-    · simp
-    · simp
-
-lemma clMul_eq_clMulSpec (a b : B128) : clMul a b = clMulSpec a b := by
-  rw [← toPoly_injective]
-  rw [toPoly_clMul]
-  rw [toPoly_clMulSpec]
-
-/-- Unfold `clMul` into an always-XOR form so that `toPoly_fold_xor`
-applies directly in the proof of `toPoly_clMul`. -/
-lemma clMul_unfold (a b : B128) :
-    clMul a b = Fin.foldl 128
-      (fun acc i => acc ^^^ (if a.getLsbD i
-        then to256 b <<< (i : Nat) else 0)) (0 : B256) := by
-  rw [clMul_eq_clMulSpec]
-  exact clMulSpec_unfold a b
 
 lemma toPoly_one_eq_one {w : Nat} (h_w_pos : w > 0) : toPoly (BitVec.ofNat w 1) = 1 := by
   unfold toPoly
@@ -897,6 +714,181 @@ theorem toPoly_shiftLeft_no_overflow {w d : ℕ} (a : BitVec w) (ha : a.toNat < 
       · simp [toPoly_coeff, hn, hs, hns]
     · simp [toPoly_coeff, hn, hs]
 
+lemma BitVec.eq_of_xor_eq_zero {w : Nat} {x y : BitVec w} (h : x ^^^ y = 0) : x = y := by
+  simpa [_root_.BitVec.xor_eq_zero_iff] using h
+
+lemma toPoly_injective {w : Nat} (x y : BitVec w) : toPoly x = toPoly y ↔ x = y := by
+  have h_xor : toPoly (x ^^^ y) = toPoly x + toPoly y := toPoly_xor x y
+  constructor
+  · intro h
+    rw [h, CharTwo.add_self_eq_zero] at h_xor
+    have h_ne : x ^^^ y = 0 := by
+      by_contra hc
+      have hc' : toPoly (x ^^^ y) ≠ 0 := (toPoly_ne_zero_iff_ne_zero (x ^^^ y)).mpr hc
+      exact hc' h_xor
+    exact BitVec.eq_of_xor_eq_zero h_ne
+  · intro h
+    rw [h]
+
+lemma getLsb_zeroExtend {w v : Nat} (x : BitVec w) (i : Fin v) :
+    (x.zeroExtend v).getLsb i = (if h : i.val < w then x.getLsb ⟨i.val, h⟩ else false) := by
+  simp only [BitVec.getLsb, BitVec.zeroExtend_eq_setWidth, BitVec.toNat_setWidth]
+  rw [Nat.testBit_mod_two_pow]
+  simp only [i.isLt, decide_true, Bool.true_and]
+  split_ifs with h
+  · rfl
+  · rw [Nat.testBit_eq_false_of_lt]
+    have := BitVec.isLt x
+    have h_pow : 2^w ≤ 2^i.val := Nat.pow_le_pow_right (by decide) (by omega)
+    omega
+
+lemma getLsb_ushr {w : Nat} (x : BitVec w) (n : Nat) (i : Fin (w - n)) :
+    (x >>> n).getLsb ⟨i.val, by omega⟩ = x.getLsb ⟨i.val + n, by omega⟩ := by
+  simp only [BitVec.getLsb, BitVec.toNat_ushiftRight, Nat.testBit_shiftRight]
+  congr 1
+  omega
+
+lemma toPoly_split (a : B128) :
+    toPoly a = toPoly (a.zeroExtend 64) + toPoly ((a >>> 64).zeroExtend 64) * X^64 := by
+  ext i
+  rw [Polynomial.coeff_add, Polynomial.coeff_mul_X_pow']
+  rw [toPoly_coeff, toPoly_coeff, toPoly_coeff]
+  by_cases hi : i < 128
+  · simp only [dif_pos hi]
+    by_cases hi64 : i < 64
+    · have h1 : i < 64 := hi64
+      have h2 : i - 64 < 64 := by omega
+      simp only [dif_pos h1, show ¬(64 ≤ i) by omega, ↓reduceIte, add_zero]
+      rw [getLsb_zeroExtend]
+      simp only [dif_pos hi]
+    · have h1 : ¬(i < 64) := hi64
+      have h2 : i - 64 < 64 := by omega
+      simp only [dif_neg h1, dif_pos h2, if_pos (show 64 ≤ i by omega), zero_add]
+      rw [getLsb_zeroExtend]
+      rw [dif_pos (show i - 64 < 128 by omega)]
+      have h_get := getLsb_ushr a 64 ⟨i - 64, h2⟩
+      simp only at h_get
+      simp only [h_get]
+      have hval : i - 64 + 64 = i := by omega
+      simp [hval]
+  · have h1 : ¬(i < 128) := hi
+    have h2 : ¬(i < 64) := by omega
+    simp only [dif_neg h1, dif_neg h2]
+    by_cases hs : 64 ≤ i
+    · by_cases h3 : i - 64 < 64
+      · omega
+      · simp only [dif_neg h3, ite_self, add_zero, zero_add]
+    · omega
+
+lemma toPoly_64_extend_128 (a : BitVec 64) :
+    toPoly (BitVec.zeroExtend 128 a) = toPoly a := by
+  unfold toPoly
+  let f : Fin 128 → Polynomial (ZMod 2) :=
+    fun i => if (BitVec.zeroExtend 128 a).getLsb i then X ^ i.val else 0
+  have h_split_128: 128 = 64 + 64 := by rfl
+  rw! (castMode := .all) [h_split_128]
+  rw [Fin.sum_univ_add]
+  rw [←Finset.sum_add_distrib]
+  simp only [Nat.reduceAdd, Fin.natAdd_eq_addNat]
+  apply Finset.sum_congr (h := by rfl)
+  intro (i : Fin 64) hi_mem_univ
+  dsimp only [BitVec.getLsb]
+  simp only [BitVec.zeroExtend_eq_setWidth, BitVec.toNat_setWidth, Fin.val_castAdd, Fin.val_addNat]
+  have h_mod : a.toNat % 2^128 = a.toNat := by
+    rw [Nat.mod_eq_of_lt (by linarith [BitVec.isLt a, show 2^64 < (2^128 : ℕ) by decide])]
+  rw [h_mod]
+  have h_toNat_lt := BitVec.toNat_lt_twoPow_of_le (n := i.val + 64) (x := a) (h := by omega)
+  have h_testBit_false : (BitVec.toNat a).testBit (↑i + 64) = false :=
+    Nat.testBit_lt_two_pow h_toNat_lt
+  simp only [h_testBit_false, Bool.false_eq_true, ↓reduceIte, add_zero]
+  rfl
+
+lemma clMul64_unfold (a b : BitVec 64) :
+    clMul64 a b = Fin.foldl 64
+      (fun acc i => acc ^^^ (if a.getLsbD i
+        then BitVec.zeroExtend 128 b <<< (i : Nat) else 0)) (0 : BitVec 128) := by
+    unfold clMul64
+    congr
+    funext acc i
+    cases h : BitVec.getLsbD a i
+    · simp
+    · simp
+
+lemma toPoly_clMul64 (a b : BitVec 64) :
+    toPoly (clMul64 a b) = toPoly a * toPoly b := by
+    rw [clMul64_unfold]
+    rw [toPoly_fold_xor (f := fun k => if a.getLsbD k = true then BitVec.zeroExtend 128 b <<< k else 0)]
+    conv_rhs => enter [1]; unfold toPoly
+    unfold BitVec.getLsb
+    rw [Fin.sum_univ_eq_sum_range
+      (f := fun i => if (BitVec.toNat a).testBit i = true
+        then X ^ i else 0)]
+    rw [Finset.sum_mul]
+    apply Finset.sum_congr rfl
+    intro i hi
+    simp only [Finset.mem_range] at hi
+    unfold BitVec.getLsbD
+    split_ifs
+    · have ha_proof : (BitVec.zeroExtend 128 b).toNat < 2 ^ 64 := by
+           rw [BitVec.zeroExtend_eq_setWidth, BitVec.toNat_setWidth]
+           have := BitVec.isLt b
+           rw [Nat.mod_eq_of_lt (by linarith [this, show 2^64 < (2^128 : ℕ) by decide])]
+           exact this
+      have h_no_overflow_proof : 64 + i ≤ 128 := by
+           omega
+      rw  [toPoly_shiftLeft_no_overflow (d := 64) (BitVec.zeroExtend 128 b)
+                                         (ha := ha_proof)
+                                         (h_no_overflow := h_no_overflow_proof)]
+      rw [toPoly_64_extend_128]
+      ring
+    · simp [toPoly_zero_eq_zero]
+
+lemma toPoly_extend_shift {shift : Nat} (x : BitVec 128) (h_shift : 128 + shift ≤ 256) :
+    toPoly (BitVec.zeroExtend 256 x <<< shift) = toPoly x * X^shift := by
+  have ha_proof : (BitVec.zeroExtend 256 x).toNat < 2 ^ 128 := by
+    rw [BitVec.zeroExtend_eq_setWidth, BitVec.toNat_setWidth]
+    rw [Nat.mod_eq_of_lt (by linarith [BitVec.isLt x, show 2^128 < (2^256 : ℕ) by decide])]
+    exact BitVec.isLt x
+  rw [toPoly_shiftLeft_no_overflow (d := 128) (BitVec.zeroExtend 256 x) (ha := ha_proof) (h_no_overflow := h_shift)]
+  rw [show BitVec.zeroExtend 256 x = to256 x from rfl, toPoly_128_extend_256]
+
+lemma toPoly_clMul (a b : B128) :
+    toPoly (clMul a b) = toPoly a * toPoly b := by
+  unfold clMul
+  dsimp only
+  rw [toPoly_xor, toPoly_xor]
+  let h_l_val := clMul64 (a.zeroExtend 64) (b.zeroExtend 64)
+  let h_h_val := clMul64 ((a >>> 64).zeroExtend 64) ((b >>> 64).zeroExtend 64)
+  let h_m_val := clMul64 (((a >>> 64).zeroExtend 64) ^^^ (a.zeroExtend 64)) (((b >>> 64).zeroExtend 64) ^^^ (b.zeroExtend 64))
+  have h_shift128 : toPoly (BitVec.zeroExtend 256 h_h_val <<< 128) = toPoly h_h_val * X^128 := by
+    apply toPoly_extend_shift; decide
+  have h_shift64 : toPoly (BitVec.zeroExtend 256 (h_m_val ^^^ h_h_val ^^^ h_l_val) <<< 64) =
+      toPoly (h_m_val ^^^ h_h_val ^^^ h_l_val) * X^64 := by
+    apply toPoly_extend_shift; decide
+  have h_l_extend : toPoly (BitVec.zeroExtend 256 h_l_val) = toPoly h_l_val := by
+    exact toPoly_128_extend_256 h_l_val
+  rw [h_shift128, h_shift64, h_l_extend]
+  rw [toPoly_xor, toPoly_xor]
+  rw [toPoly_clMul64, toPoly_clMul64, toPoly_clMul64]
+  -- Expand the XOR arguments of the middle Karatsuba product so `ring_nf` sees sums.
+  rw [toPoly_xor, toPoly_xor]
+  rw [toPoly_split a, toPoly_split b]
+  -- Karatsuba rearrangement over `(ZMod 2)[X]`: `ring` alone cannot use `x + x = 0`,
+  -- so normalize first and discharge the doubled cross terms with char-two lemmas.
+  ring_nf
+  simp only [ZMod2Poly.two_mul, ZMod2Poly.mul_two, zero_mul, mul_zero, add_zero, zero_add]
+
+lemma clMulSpec_unfold (a b : B128) :
+    clMulSpec a b = Fin.foldl 128
+      (fun acc i => acc ^^^ (if a.getLsbD i
+        then to256 b <<< (i : Nat) else 0)) (0 : B256) := by
+    unfold clMulSpec
+    congr
+    funext acc i
+    cases h : BitVec.getLsbD a i
+    · simp
+    · simp
+
 lemma toPoly_clMulSpec (a b : B128) :
     toPoly (clMulSpec a b) = toPoly a * toPoly b := by
     rw [clMulSpec_unfold]
@@ -923,6 +915,20 @@ lemma toPoly_clMulSpec (a b : B128) :
       rw [toPoly_128_extend_256]
       ring
     · simp [toPoly_zero_eq_zero]
+
+lemma clMul_eq_clMulSpec (a b : B128) : clMul a b = clMulSpec a b := by
+  rw [← toPoly_injective]
+  rw [toPoly_clMul]
+  rw [toPoly_clMulSpec]
+
+/-- Unfold `clMul` into an always-XOR form so that `toPoly_fold_xor`
+applies directly in the proof of `toPoly_clMul`. -/
+lemma clMul_unfold (a b : B128) :
+    clMul a b = Fin.foldl 128
+      (fun acc i => acc ^^^ (if a.getLsbD i
+        then to256 b <<< (i : Nat) else 0)) (0 : B256) := by
+  rw [clMul_eq_clMulSpec]
+  exact clMulSpec_unfold a b
 
 /-- Helper lemma to chain the modular squaring steps. -/
 lemma chain_step {P : Polynomial (ZMod 2)} (hP : P ≠ 0) {k : ℕ}
