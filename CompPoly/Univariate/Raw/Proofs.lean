@@ -59,34 +59,7 @@ lemma eval₂Naive_empty (f : R →+* S) (x : S) :
     eval₂Naive f x (#[] : CPolynomial.Raw R) = 0 := by
   simp [eval₂Naive]
 
-/-
-Helper: Horner foldr equals the naive sum-of-powers for lists.
--/
-private lemma horner_eq_naive_list (f : R →+* S) (x : S) :
-    ∀ (l : List R),
-    l.foldr (fun a acc ↦ f a + acc * x) 0 =
-    (l.zipIdx.map (fun ⟨a, i⟩ ↦ f a * x ^ i)).sum := by
-  intro l
-  induction' l using List.reverseRecOn with a l ih
-  · rfl
-  · simp +decide [*, List.zipIdx_append]
-    rw [← ih]
-    clear ih
-    induction a <;> simp +decide [*, pow_succ, mul_assoc, add_mul, add_assoc]
 
-/-
-The Horner backend agrees with the naive sum-of-powers backend.
--/
-theorem eval₂_eq_eval₂_naive (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
-    eval₂ f x p = eval₂Naive f x p := by
-  convert horner_eq_naive_list f x p.toList using 1
-  · unfold eval₂
-    aesop
-  · unfold CPolynomial.Raw.eval₂Naive
-    induction p using Array.recOn
-    simp +decide [*]
-    induction ‹List R› using List.reverseRecOn <;>
-      simp +decide [*, List.zipIdx_append]
 
 /-
 `eval₂` equals the Finset sum over `range p.size`.

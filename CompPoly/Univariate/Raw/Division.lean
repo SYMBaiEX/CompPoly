@@ -5,7 +5,7 @@ Authors: Quang Dao, Gregor Mitscha-Baude, Derek Sorensen, Desmond Coles, Valerii
 -/
 import Mathlib
 import CompPoly.Univariate.Raw.Ops
-import CompPoly.Univariate.ToPoly
+import CompPoly.Univariate.ToPoly.Raw
 
 /-!
 # Raw Univariate Polynomial Division

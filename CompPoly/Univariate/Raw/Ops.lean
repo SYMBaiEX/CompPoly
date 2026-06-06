@@ -120,7 +120,6 @@ def mulRaw [Semiring R] (p q : CPolynomial.Raw R) : CPolynomial.Raw R :=
   partial sum (`mulRaw` does the untrimmed accumulation). -/
 @[inline, specialize]
 def mul [Semiring R] [BEq R] (p q : CPolynomial.Raw R) : CPolynomial.Raw R :=
-<<<<<<< HEAD
   (mulRaw p q).trim
 
 /-- Exponentiation of a `CPolynomial.Raw` by a natural number `n` via repeated multiplication.
@@ -153,23 +152,6 @@ at the end, rather than after every squaring step.
 @[inline, specialize]
 def powBySq [Semiring R] [BEq R] (p : CPolynomial.Raw R) (n : Nat) : CPolynomial.Raw R :=
   (powBySqUntrimmed p n).trim
-=======
-  p.zipIdx.foldl (fun acc ⟨a, i⟩ ↦ acc.add <| (smul a q).mulPowX i) (mk #[])
-
-/-- Linear exponentiation of a `CPolynomial.Raw` by repeated multiplication (reference impl). -/
-def powIterate [Semiring R] [BEq R] (p : CPolynomial.Raw R) (n : Nat) : CPolynomial.Raw R :=
-  (mul p)^[n] (C 1)
-
-/-- Exponentiation of a `CPolynomial.Raw` by a natural number `n` via squaring. -/
-@[inline, specialize]
-def pow [Semiring R] [BEq R] (p : CPolynomial.Raw R) : Nat → CPolynomial.Raw R
-  | 0 => C 1
-  | 1 => p.mul (C 1)
-  | n + 2 =>
-    let half := pow p ((n + 2) / 2)
-    let sq := mul half half
-    if (n + 2) % 2 == 0 then sq else mul p sq
->>>>>>> pr-190
 
 instance : Zero (CPolynomial.Raw R) := ⟨#[]⟩
 instance [One R] : One (CPolynomial.Raw R) := ⟨C 1⟩
