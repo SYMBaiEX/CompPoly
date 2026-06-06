@@ -141,56 +141,48 @@ lemma toPoly_trim [LawfulBEq R] {p : CPolynomial.Raw R} : p.trim.toPoly = p.toPo
   ext n
   rw [coeff_toPoly, coeff_toPoly, Trim.coeff_eq_coeff]
 
-section AddCoeffHelpers
-
-/- Self-contained copies of the `addRaw` size/coefficient facts (also proved in
-`CompPoly.Univariate.Raw.Proofs`, which this file cannot import without creating
-an import cycle through `Raw.Division`). -/
-
-private lemma matchSize_size_eq_aux {p q : CPolynomial.Raw Q} :
+private theorem matchSize_size_eq {p q : CPolynomial.Raw Q} :
     let (p', q') := Array.matchSize p q 0
     p'.size = q'.size := by
   change (Array.rightpad _ _ _).size = (Array.rightpad _ _ _).size
   rw [Array.size_rightpad, Array.size_rightpad]
   omega
 
-private lemma matchSize_size_aux {p q : CPolynomial.Raw Q} :
+private theorem matchSize_size {p q : CPolynomial.Raw Q} :
     let (p', _) := Array.matchSize p q 0
     p'.size = max p.size q.size := by
   change (Array.rightpad _ _ _).size = max (Array.size _) (Array.size _)
   rw [Array.size_rightpad]
   omega
 
-private lemma zipWith_size_aux {R} {f : R → R → R} {a b : Array R} (h : a.size = b.size) :
+private theorem zipWith_size {S : Type*} {f : S → S → S} {a b : Array S} (h : a.size = b.size) :
     (Array.zipWith f a b).size = a.size := by
-  simp; omega
+  simp
+  omega
 
-private theorem add_size_aux {p q : CPolynomial.Raw Q} :
+private theorem addRaw_size {p q : CPolynomial.Raw Q} :
     (addRaw p q).size = max p.size q.size := by
-  change (Array.zipWith _ _ _ ).size = max p.size q.size
-  rw [zipWith_size_aux matchSize_size_eq_aux, matchSize_size_aux]
+  change (Array.zipWith _ _ _).size = max p.size q.size
+  rw [zipWith_size matchSize_size_eq, matchSize_size]
 
-private theorem add_coeff_aux {p q : CPolynomial.Raw Q} {i : ℕ} (hi : i < (addRaw p q).size) :
-    (addRaw p q)[i] = p.coeff i + q.coeff i := by
-  simp [addRaw]
-  by_cases hi' : i < p.size <;> by_cases hi'' : i < q.size <;> simp_all
-
-private theorem addRaw_coeff_aux (p q : CPolynomial.Raw Q) (i : ℕ) :
+private theorem addRaw_coeff (p q : CPolynomial.Raw Q) (i : ℕ) :
     (addRaw p q).coeff i = p.coeff i + q.coeff i := by
-  rcases (Nat.lt_or_ge i (addRaw p q).size) with h_lt | h_ge
-  · rw [← add_coeff_aux h_lt]; simp [h_lt]
-  have h_lt' : i ≥ max p.size q.size := by rwa [← add_size_aux]
-  have h_p : i ≥ p.size := by omega
-  have h_q : i ≥ q.size := by omega
-  simp [h_ge, h_p, h_q]
-
-end AddCoeffHelpers
+  rcases Nat.lt_or_ge i (addRaw p q).size with hi | hi
+  · have hget : (addRaw p q)[i] = p.coeff i + q.coeff i := by
+      simp [addRaw]
+      by_cases hp : i < p.size <;> by_cases hq : i < q.size <;> simp_all
+    simpa [coeff, hi] using hget
+  · have hmax : max p.size q.size ≤ i := by
+      simpa [addRaw_size (p := p) (q := q)] using hi
+    have hp : p.size ≤ i := le_trans (le_max_left _ _) hmax
+    have hq : q.size ≤ i := le_trans (le_max_right _ _) hmax
+    simp [coeff, hi, hp, hq]
 
 /-- `toPoly` preserves addition. -/
 @[grind =]
 theorem toPoly_addRaw {p q : CPolynomial.Raw Q} : (addRaw p q).toPoly = p.toPoly + q.toPoly := by
   ext n
-  rw [Polynomial.coeff_add, coeff_toPoly, coeff_toPoly, coeff_toPoly, addRaw_coeff_aux]
+  rw [Polynomial.coeff_add, coeff_toPoly, coeff_toPoly, coeff_toPoly, addRaw_coeff]
 
 /-- `toPoly` of a right-scalar multiplication is multiplication by `Polynomial.C r` on the right. -/
 @[grind =]
@@ -245,10 +237,9 @@ theorem trim_toImpl [LawfulBEq R] (p : R[X]) : p.toImpl.trim = p.toImpl := by
 theorem Raw.toImpl_toPoly [LawfulBEq R] (p : CPolynomial.Raw R) : p.toPoly.toImpl = p.trim := by
   have h_inj : ∀ a b : CPolynomial.Raw R, IsCanonical a → IsCanonical b → a.toPoly = b.toPoly → a = b := by
     intro a b ha hb hab
-    apply Trim.isCanonical_ext ha hb
+    apply Trim.canonical_ext (Trim.trim_eq_of_isCanonical ha) (Trim.trim_eq_of_isCanonical hb)
     intro i
-    rw [← coeff_toPoly, ← coeff_toPoly]
-    exact congrArg (fun p => p.coeff i) hab
+    rw [← coeff_toPoly, hab, coeff_toPoly]
   have h_canonical_toImpl := isCanonical_toImpl p.toPoly
   have h_canonical_trim := Trim.isCanonical_trim p
   have h_eq : p.toPoly = p.toPoly.toImpl.toPoly := by rw [toPoly_toImpl]

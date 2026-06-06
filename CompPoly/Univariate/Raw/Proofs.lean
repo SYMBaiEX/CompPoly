@@ -34,10 +34,10 @@ lemma pow_zero (p : CPolynomial.Raw R) :
     p ^ 0 = C 1 := by
       exact rfl
 
+/-- The iterate-based raw power definition unfolds one step on the left. -/
 lemma pow_succ (p : CPolynomial.Raw R) (n : ℕ) :
-    p ^ (n + 1) = p * (p ^ n) := by
-      convert ( Function.iterate_succ_apply' ( mul p ) n ( C 1 ) )
-           using 1
+    p ^ (n + 1) = p * (p ^ n) :=
+  Function.iterate_succ_apply' (mul p) n (C 1)
 
 section AddDefs
 
@@ -1025,10 +1025,10 @@ omit [BEq R] in
 theorem eval₂Horner_eq_eval₂
     (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
     eval₂Horner f x p = eval₂ f x p := by
-    unfold eval₂ eval₂Horner
-    rw [← Array.foldl_toList, ← Array.foldr_toList, Array.toList_zipIdx]
-    have := foldl_zipIdx_eq_foldr_pow_k f x 0 0 p.toList
-    simpa using this.symm
+  unfold eval₂ eval₂Horner
+  rw [← Array.foldl_toList, ← Array.foldr_toList, Array.toList_zipIdx]
+  have := foldl_zipIdx_eq_foldr_pow_k f x 0 0 p.toList
+  simpa using this.symm
 
 end EvalTheorems
 
@@ -1306,13 +1306,13 @@ theorem div_canonical [LawfulBEq R] (p q : CPolynomial.Raw R) :
     (div p q).trim = div p q :=
   divByMonic_canonical _ _
 
-/-- `Raw.mod` returns a canonical polynomial (no condition on inputs).
-The intermediate `C (q.leadingCoeff)⁻¹ • p` is `C _ * p` via `Mul.toSMul`, which trims. -/
-theorem mod_canonical [LawfulBEq R] (p q : CPolynomial.Raw R) :
+/-- `Raw.mod` returns a canonical polynomial when the dividend is canonical. -/
+theorem mod_canonical [LawfulBEq R] {p : CPolynomial.Raw R} (hp : p.trim = p)
+    (q : CPolynomial.Raw R) :
     (mod p q).trim = mod p q := by
   unfold mod
-  apply modByMonic_canonical
-  exact mul_is_trimmed _ _
+  apply modByMonic_canonical (R := R)
+  exact hp
 
 end
 

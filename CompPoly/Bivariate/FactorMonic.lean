@@ -32,6 +32,20 @@ namespace CBivariate
 
 variable {R : Type*}
 
+private lemma root_divByMonic_eq {S : Type*} [CommRing S] [BEq S] [LawfulBEq S] [Nontrivial S]
+    (p q : CPolynomial S) :
+    _root_.CompPoly.divByMonic p q = p.divByMonic q := by
+  apply Subtype.ext
+  show (CPolynomial.Raw.divByMonic p.val q.val).trim = CPolynomial.Raw.divByMonic p.val q.val
+  exact CPolynomial.Raw.divByMonic_canonical p.val q.val
+
+private lemma root_modByMonic_eq {S : Type*} [CommRing S] [BEq S] [LawfulBEq S] [Nontrivial S]
+    (p q : CPolynomial S) :
+    _root_.CompPoly.modByMonic p q = p.modByMonic q := by
+  apply Subtype.ext
+  show (CPolynomial.Raw.modByMonic p.val q.val).trim = CPolynomial.Raw.modByMonic p.val q.val
+  exact CPolynomial.Raw.modByMonic_canonical (CPolynomial.trim_eq p) q.val
+
 /-- The linear monic divisor `Y - f`, as a bivariate polynomial
 (`CBivariate R = CPolynomial (CPolynomial R)`). -/
 def linearYDivisor [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R]
@@ -79,8 +93,8 @@ division by `Y - f`: the quotient matches `divByMonic`, and the constant-in-`Y`
 remainder `C (divByLinearY Q f).2` matches `modByMonic`. -/
 theorem divByLinearY_eq_divByMonic [CommRing R] [BEq R] [LawfulBEq R] [Nontrivial R] [DecidableEq R]
     (Q : CBivariate R) (f : CPolynomial R) :
-    CPolynomial.divByMonic Q (linearYDivisor f) = (divByLinearY Q f).1
-      ∧ CPolynomial.modByMonic Q (linearYDivisor f)
+    _root_.CompPoly.divByMonic Q (linearYDivisor f) = (divByLinearY Q f).1
+      ∧ _root_.CompPoly.modByMonic Q (linearYDivisor f)
           = CPolynomial.C (divByLinearY Q f).2 := by
   let g := linearYDivisor f
   let q := (divByLinearY Q f).1
@@ -99,11 +113,13 @@ theorem divByLinearY_eq_divByMonic [CommRing R] [BEq R] [LawfulBEq R] [Nontrivia
       (f := CPolynomial.toPoly Q) (g := CPolynomial.toPoly g)
       (q := CPolynomial.toPoly q) (r := (CPolynomial.C r).toPoly)
       hg_toPoly ⟨he, hdeg⟩
-  have hdiv : CPolynomial.toPoly (CPolynomial.divByMonic Q g) = CPolynomial.toPoly q := by
+  have hdiv : CPolynomial.toPoly (_root_.CompPoly.divByMonic Q g) = CPolynomial.toPoly q := by
+    rw [root_divByMonic_eq]
     rw [CPolynomial.divByMonic_toPoly_eq_divByMonic Q g hg]
     exact huniq.1
-  have hmod : CPolynomial.toPoly (CPolynomial.modByMonic Q g)
+  have hmod : CPolynomial.toPoly (_root_.CompPoly.modByMonic Q g)
       = CPolynomial.toPoly (CPolynomial.C r) := by
+    rw [root_modByMonic_eq]
     rw [CPolynomial.modByMonic_toPoly_eq_modByMonic Q g hg]
     exact huniq.2
   constructor

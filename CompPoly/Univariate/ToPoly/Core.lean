@@ -28,7 +28,8 @@ theorem ofArray_toPoly [Semiring R] [BEq R] [LawfulBEq R] (p : CPolynomial.Raw R
 
   This shows `toPoly` is a bijection from `CPolynomial R` to `Polynomial R`. -/
 @[grind =]
-lemma toImpl_toPoly_of_canonical [Semiring R] [BEq R] [LawfulBEq R] (p : CPolynomial R) : p.toPoly.toImpl = p := by
+lemma toImpl_toPoly_of_canonical [Semiring R] [BEq R] [LawfulBEq R] (p : CPolynomial R) :
+    p.toPoly.toImpl = p := by
   suffices h_inj : ∀ q : CPolynomial R, p.toPoly = q.toPoly → p = q by
     have : p.toPoly = p.toPoly.toImpl.toPoly := by rw [Raw.toPoly_toImpl]
     exact

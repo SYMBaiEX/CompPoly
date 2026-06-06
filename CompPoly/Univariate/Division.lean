@@ -18,9 +18,9 @@ namespace CompPoly
 
 open CPolynomial
 
-section Division
+section MonicDivision
 
-variable {R : Type*} [Field R] [BEq R] [LawfulBEq R]
+variable {R : Type*} [CommRing R] [BEq R] [LawfulBEq R]
 
 /-- Quotient of `p` by a monic polynomial `q`. Matches Mathlib's `Polynomial.divByMonic`. -/
 def divByMonic (p q : CPolynomial R) : CPolynomial R :=
@@ -29,6 +29,12 @@ def divByMonic (p q : CPolynomial R) : CPolynomial R :=
 /-- Remainder of `p` modulo a monic polynomial `q`. Matches Mathlib's `Polynomial.modByMonic`. -/
 def modByMonic (p q : CPolynomial R) : CPolynomial R :=
   ⟨(Raw.modByMonic p.val q.val).trim, Raw.Trim.isCanonical_trim (Raw.modByMonic p.val q.val)⟩
+
+end MonicDivision
+
+section Division
+
+variable {R : Type*} [Field R] [BEq R] [LawfulBEq R]
 
 /-- Remainder of `p` modulo a monic polynomial `q`, using a remainder-only implementation. -/
 def modByMonicRemainderOnly (p q : CPolynomial R) : CPolynomial R :=
@@ -55,21 +61,44 @@ def mod (p q : CPolynomial R) : CPolynomial R :=
 instance : Div (CPolynomial R) := ⟨div⟩
 instance : Mod (CPolynomial R) := ⟨mod⟩
 
+/-- Equality between `div` and `divByMonic` for `CPolynomial R`. -/
+theorem div_eq_divByMonic (p q : CPolynomial R) :
+    div p q =
+      divByMonic (q.leadingCoeff⁻¹ • p) (q.leadingCoeff⁻¹ • q) := by
+  apply Subtype.ext
+  show (Raw.div p.val q.val).trim = _
+  apply congrArg Raw.trim
+  show Raw.div p.val q.val = _
+  have hq_lc : Raw.leadingCoeff q.val = q.leadingCoeff :=
+    show q.val.trim.getLastD 0 = q.val.getLastD 0 by rw [CPolynomial.trim_eq q]
+  rw [Raw.div, hq_lc, smul_eq_mul, Raw.C_mul_eq_smul_trim, Raw.C_mul_eq_smul_trim]
+  rfl
+
+/-- Equality between `mod` and `modByMonic` for `CPolynomial R`. -/
+theorem mod_eq_modByMonic (p q : CPolynomial R) :
+    mod p q =
+      modByMonic p (q.leadingCoeff⁻¹ • q) := by
+  apply Subtype.ext
+  show (Raw.mod p.val q.val).trim = _
+  apply congrArg Raw.trim
+  show Raw.mod p.val q.val = _
+  have hq_lc : Raw.leadingCoeff q.val = q.leadingCoeff := by
+    show q.val.trim.getLastD 0 = q.val.getLastD 0
+    rw [CPolynomial.trim_eq q]
+  rw [Raw.mod, hq_lc]
+  change Raw.modByMonic p.val (Raw.C q.leadingCoeff⁻¹ * q.val) =
+    Raw.modByMonic p.val ((Raw.smul q.leadingCoeff⁻¹ q.val).trim)
+  rw [Raw.C_mul_eq_smul_trim]
+
 /-- Any `CPolynomial` divided by the zero polynomial gives the zero
 polynomial. -/
 @[simp]
-theorem div_zero (p : CPolynomial R) : p.div 0 = 0 := by
+theorem div_zero (p : CPolynomial R) : div p 0 = 0 := by
   apply Subtype.ext; show (Raw.div p.val 0).trim = 0; unfold Raw.div
   rw [Raw.mul_zero, Raw.leadingCoeff_zero, inv_zero]
-  rw [smul_eq_mul, Raw.C_mul_eq_smul_trim, Raw.smul_zero_trim]; rfl
-
-/-- Any `CPolynomial` modulo the zero polynomial gives the zero
-polynomial. -/
-@[simp]
-theorem mod_zero (p : CPolynomial R) : p.mod 0 = 0 := by
-  apply Subtype.ext; show (Raw.mod p.val 0).trim = 0; unfold Raw.mod
-  rw [Raw.mul_zero, Raw.leadingCoeff_zero, inv_zero]
-  rw [smul_eq_mul, Raw.C_mul_eq_smul_trim, Raw.smul_zero_trim]; rfl
+  rw [smul_eq_mul, Raw.C_mul_eq_smul_trim, Raw.smul_zero_trim]
+  change (0 : CPolynomial.Raw R).trim = 0
+  exact Raw.Trim.canonical_empty
 
 /-- Normalize a nonzero polynomial to monic form. The zero polynomial stays zero. -/
 def monicNormalize (p : CPolynomial R) : CPolynomial R :=
@@ -85,30 +114,3 @@ def gcdMonic (p q : CPolynomial R) : CPolynomial R :=
   CPolynomial.ofArray (Raw.gcdMonic p.val q.val)
 
 end Division
-
-section ImplementationCorrectness
-
-variable {R : Type*} [Field R] [BEq R] [LawfulBEq R]
-
-/-- `div` matches `Polynomial.div` with respect to `toPoly` -/
-theorem div_toPoly (p q : CPolynomial R) :
-    (div p q).toPoly = (Polynomial.div p.toPoly q.toPoly) := by
-  show (Raw.div p.val q.val).trim.toPoly = _
-  rw [Raw.toPoly_trim]
-  exact Raw.div_toPoly p.val q.val
-
-/-- `mod` matches `Polynomial.mod` with respect to `toPoly` -/
-theorem mod_toPoly (p q : CPolynomial R) (hq : q ≠ 0) :
-    (mod p q).toPoly = (Polynomial.mod p.toPoly q.toPoly) := by
-  show (Raw.mod p.val q.val).trim.toPoly = _
-  rw [Raw.toPoly_trim]
-  have hq_val : q.val.toPoly ≠ 0 := by
-    intro h
-    apply hq
-    apply CPolynomial.ext
-    have hsize := (Raw.trim_size_zero_iff_toPoly_zero q.val).mpr h
-    simp_all only [ne_eq, trim_eq, Array.size_eq_zero_iff, Array.empty_eq]
-    rfl
-  exact Raw.mod_toPoly p.val q.val hq_val
-
-end ImplementationCorrectness

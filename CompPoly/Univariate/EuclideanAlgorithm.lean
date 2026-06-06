@@ -91,10 +91,26 @@ theorem xgcd_bezout [Field R] [BEq R] [LawfulBEq R]
 Correctness theorems for `xgcd` with the default threshold 0.
 -/
 
+private lemma root_div_eq [Field R] [BEq R] [LawfulBEq R]
+    (p q : CPolynomial R) :
+    _root_.CompPoly.div p q = p.div q := by
+  apply Subtype.ext
+  show (CPolynomial.Raw.div p.val q.val).trim = CPolynomial.Raw.div p.val q.val
+  exact CPolynomial.Raw.div_canonical p.val q.val
+
+private lemma root_mod_eq [Field R] [BEq R] [LawfulBEq R]
+    (p q : CPolynomial R) :
+    _root_.CompPoly.mod p q = p.mod q := by
+  apply Subtype.ext
+  show (CPolynomial.Raw.mod p.val q.val).trim = CPolynomial.Raw.mod p.val q.val
+  exact CPolynomial.Raw.mod_canonical (CPolynomial.trim_eq p) q.val
+
 private lemma toPoly_sub_div_mul [Field R] [BEq R] [LawfulBEq R]
     (r r' a b : CPolynomial R) :
     (a - (r' / r) * b).toPoly = a.toPoly - (r'.toPoly / r.toPoly) * b.toPoly := by
-  rw [show r' / r = r'.div r from rfl, toPoly_sub, toPoly_mul, div_toPoly_eq_div]
+  change (a - _root_.CompPoly.div r' r * b).toPoly =
+    a.toPoly - (r'.toPoly / r.toPoly) * b.toPoly
+  rw [root_div_eq, toPoly_sub, toPoly_mul, div_toPoly_eq_div]
 
 /-- The gcd component of CompPoly's `xgcdAux` at threshold `0` coincides with
 Mathlib's `EuclideanDomain.gcd`. -/
@@ -217,8 +233,8 @@ private theorem Raw.toPoly_smul [Semiring R] [BEq R] [LawfulBEq R]
 theorem monicNormalize_toPoly_eq_normalize
     [Field R] [BEq R] [LawfulBEq R] [DecidableEq R]
     (p : CPolynomial R) :
-    (CPolynomial.monicNormalize p).toPoly = normalize p.toPoly := by
-  unfold CPolynomial.monicNormalize CPolynomial.Raw.monicNormalize
+    (_root_.CompPoly.monicNormalize p).toPoly = normalize p.toPoly := by
+  unfold _root_.CompPoly.monicNormalize CPolynomial.Raw.monicNormalize
   rw [ofArray_toPoly, CPolynomial.trim_eq]
   by_cases hpraw : ((p.val : CPolynomial.Raw R) == 0)
   · have hp : p = 0 := CPolynomial.ext (LawfulBEq.eq_of_beq hpraw)
@@ -243,7 +259,7 @@ private theorem gcdMonicWithFuel_toPoly_eq_normalize_gcd
     [Field R] [BEq R] [LawfulBEq R] [DecidableEq R]
     (fuel : ℕ) (p q : CPolynomial R)
     (hfuel : q.toPoly.degree < fuel) :
-    (CPolynomial.gcdMonicWithFuel fuel p q).toPoly =
+    (_root_.CompPoly.gcdMonicWithFuel fuel p q).toPoly =
       normalize (EuclideanDomain.gcd p.toPoly q.toPoly) := by
   induction fuel generalizing p q with
   | zero =>
@@ -252,54 +268,52 @@ private theorem gcdMonicWithFuel_toPoly_eq_normalize_gcd
       have hq : q = 0 := (toPoly_eq_zero_iff q).mp hqpoly
       subst q
       rw [CPolynomial.toPoly_zero]
-      change (CPolynomial.monicNormalize p).toPoly =
+      change (_root_.CompPoly.monicNormalize p).toPoly =
         normalize (EuclideanDomain.gcd p.toPoly (0 : Polynomial R))
       rw [monicNormalize_toPoly_eq_normalize, EuclideanDomain.gcd_zero_right]
   | succ fuel ih =>
       by_cases hq : q = 0
       · subst q
-        simp [CPolynomial.gcdMonicWithFuel, CPolynomial.Raw.gcdMonicWithFuel,
+        simp [_root_.CompPoly.gcdMonicWithFuel, CPolynomial.Raw.gcdMonicWithFuel,
           CPolynomial.trim_eq, CPolynomial.toPoly_zero]
         have hzero : (↑(0 : CPolynomial R) : CPolynomial.Raw R) = (#[] : CPolynomial.Raw R) := rfl
         rw [if_pos hzero]
-        change (CPolynomial.monicNormalize p).toPoly = normalize p.toPoly
+        change (_root_.CompPoly.monicNormalize p).toPoly = normalize p.toPoly
         exact monicNormalize_toPoly_eq_normalize p
       · have hqraw : ¬((q.val : CPolynomial.Raw R) == 0) := by
           intro h
           exact hq (CPolynomial.ext (LawfulBEq.eq_of_beq h))
-        rw [CPolynomial.gcdMonicWithFuel, CPolynomial.Raw.gcdMonicWithFuel,
+        have hmodtrim : (((p.val : CPolynomial.Raw R) % q.val).trim =
+            ((p.val : CPolynomial.Raw R) % q.val)) :=
+          CPolynomial.Raw.mod_canonical (CPolynomial.trim_eq p) q.val
+        rw [_root_.CompPoly.gcdMonicWithFuel, CPolynomial.Raw.gcdMonicWithFuel,
           CPolynomial.trim_eq, CPolynomial.trim_eq, if_neg hqraw]
-        change (CPolynomial.gcdMonicWithFuel fuel q (p % q)).toPoly =
+        rw [← hmodtrim]
+        change (_root_.CompPoly.gcdMonicWithFuel fuel q (p % q)).toPoly =
           normalize (EuclideanDomain.gcd p.toPoly q.toPoly)
         rw [ih]
-        · rw [show (p % q).toPoly = q.leadingCoeff⁻¹ • (p.toPoly % q.toPoly) by
-            exact mod_toPoly_eq_smul_mod p q]
-          have hunit : IsUnit (Polynomial.C q.leadingCoeff⁻¹ : Polynomial R) := by
-            exact Polynomial.isUnit_C.mpr
-              (isUnit_iff_ne_zero.mpr (inv_ne_zero (CPolynomial.leadingCoeff_ne_zero hq)))
-          have hassoc :
-              Associated (q.leadingCoeff⁻¹ • (p.toPoly % q.toPoly))
-                (p.toPoly % q.toPoly) := by
-            simpa [Polynomial.smul_eq_C_mul] using
-              associated_unit_mul_left (p.toPoly % q.toPoly)
-                (Polynomial.C q.leadingCoeff⁻¹) hunit
+        · rw [show (p % q).toPoly = p.toPoly % q.toPoly by
+            change (_root_.CompPoly.mod p q).toPoly = p.toPoly % q.toPoly
+            rw [root_mod_eq]
+            exact mod_toPoly_eq_smul_mod p q hq]
           refine normalize_eq_normalize_iff_associated.mpr
             (associated_of_dvd_dvd ?_ ?_)
           · refine EuclideanDomain.dvd_gcd ?_ (EuclideanDomain.gcd_dvd_left _ _)
             exact (EuclideanDomain.dvd_mod_iff (EuclideanDomain.gcd_dvd_left
-                q.toPoly (q.leadingCoeff⁻¹ • (p.toPoly % q.toPoly)))).mp
+                q.toPoly (p.toPoly % q.toPoly))).mp
               ((EuclideanDomain.gcd_dvd_right q.toPoly
-                (q.leadingCoeff⁻¹ • (p.toPoly % q.toPoly))).trans hassoc.dvd)
+                (p.toPoly % q.toPoly)))
           · refine EuclideanDomain.dvd_gcd (EuclideanDomain.gcd_dvd_right _ _) ?_
             exact ((EuclideanDomain.dvd_mod_iff
                 (EuclideanDomain.gcd_dvd_right p.toPoly q.toPoly)).mpr
-              (EuclideanDomain.gcd_dvd_left p.toPoly q.toPoly)).trans hassoc.symm.dvd
+              (EuclideanDomain.gcd_dvd_left p.toPoly q.toPoly))
         · have hqpoly : q.toPoly ≠ 0 := (toPoly_eq_zero_iff q).not.mpr hq
           have hmod :
               (p % q).toPoly.degree ≤ (p.toPoly % q.toPoly).degree := by
-            rw [show (p % q).toPoly = q.leadingCoeff⁻¹ • (p.toPoly % q.toPoly) by
-              exact mod_toPoly_eq_smul_mod p q]
-            exact Polynomial.degree_smul_le _ _
+            rw [show (p % q).toPoly = p.toPoly % q.toPoly by
+              change (_root_.CompPoly.mod p q).toPoly = p.toPoly % q.toPoly
+              rw [root_mod_eq]
+              exact mod_toPoly_eq_smul_mod p q hq]
           exact lt_of_le_of_lt hmod
             (lt_of_lt_of_le (Polynomial.degree_mod_lt _ hqpoly)
               (Order.le_of_lt_succ hfuel))
@@ -309,9 +323,9 @@ image. -/
 theorem gcdMonic_toPoly_eq_normalize_gcd
     [Field R] [BEq R] [LawfulBEq R] [DecidableEq R]
     (p q : CPolynomial R) :
-    (CPolynomial.gcdMonic p q).toPoly =
+    (_root_.CompPoly.gcdMonic p q).toPoly =
       normalize (EuclideanDomain.gcd p.toPoly q.toPoly) := by
-  simpa [CPolynomial.gcdMonic, CPolynomial.Raw.gcdMonic] using
+  simpa [_root_.CompPoly.gcdMonic, CPolynomial.Raw.gcdMonic] using
     gcdMonicWithFuel_toPoly_eq_normalize_gcd
       (p.val.size + q.val.size + 1) p q (by
         have hqdeg : q.toPoly.degree < q.val.size := by
@@ -329,9 +343,9 @@ extended gcd. -/
 theorem gcdMonic_eq_normXgcd_fst
     [Field R] [BEq R] [LawfulBEq R] [DecidableEq R]
     (p q : CPolynomial R) :
-    CPolynomial.gcdMonic p q = (CPolynomial.normXgcd p q).1 := by
+    _root_.CompPoly.gcdMonic p q = (CPolynomial.normXgcd p q).1 := by
   apply toPolyLinearEquiv.injective
-  change (CPolynomial.gcdMonic p q).toPoly = (CPolynomial.normXgcd p q).1.toPoly
+  change (_root_.CompPoly.gcdMonic p q).toPoly = (CPolynomial.normXgcd p q).1.toPoly
   rw [gcdMonic_toPoly_eq_normalize_gcd, normXgcd_fst_toPoly]
 
 /-- The Bezout component of `normXgcd` under `toPoly` is Mathlib's
