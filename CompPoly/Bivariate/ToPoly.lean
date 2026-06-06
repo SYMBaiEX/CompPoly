@@ -427,7 +427,6 @@ theorem eval_eval_horner_y_then_x_eq_eval_eval {R : Type*}
 /-- `toPoly` preserves full evaluation: `evalEval x y f = (toPoly f).evalEval x y`. -/
 theorem evalEval_toPoly {R : Type*} [BEq R] [LawfulBEq R] [Nontrivial R] [Semiring R]
     (x y : R) (f : CBivariate R) :
-    @CBivariate.evalEval R _ _ _ _ x y f = (toPoly f).evalEval x y := by
   show CPolynomial.eval x (evalY (R := R) y f) = (toPoly f).evalEval x y
   rw [CPolynomial.eval_toPoly, evalY_toPoly]
 

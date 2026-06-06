@@ -622,6 +622,7 @@ lemma npow_zero : ∀ (x : QuotientCPolynomial R), x.pow 0 = 1 := by
   refine Quotient.inductionOn x ?_
   intro p; clear x
   apply Quotient.sound
+  show CPolynomial.Raw.pow p 0 ≈ C 1
   unfold CPolynomial.Raw.pow
   simp
 
@@ -639,10 +640,9 @@ lemma pow_succ_left (n : ℕ) (x : QuotientCPolynomial R) :
   refine Quotient.inductionOn x ?_
   intro p
   apply Quotient.sound
-  -- p.pow (n+1) = p * p.pow n is true by definition of pow for CPolynomial.Raw
-  -- By definition of pow, we have p.pow (n + 1) = p.mul (p.pow n).
-  have h_pow : p.pow (n + 1) = p.mul (p.pow n) := by
-    exact Function.iterate_succ_apply' _ _ _
+  -- By Raw.pow_succ, we have p ^ (n + 1) = p * p ^ n.
+  have h_pow : CPolynomial.Raw.pow p (n + 1) = p.mul (CPolynomial.Raw.pow p n) := by
+    exact Raw.pow_succ p n
   exact congrFun (congrArg coeff h_pow)
 
 /-
@@ -662,9 +662,9 @@ lemma npow_succ : ∀ (n : ℕ) (x : QuotientCPolynomial R), x.pow (n + 1) = x.p
   refine Quotient.inductionOn x ?_
   intro p; clear x
   apply Quotient.sound
-  -- By definition of exponentiation, we have `p.pow (n + 1) = p * p.pow n` for any `p`.
-  rw [show p.pow (n + 1) = p.mul (p.pow n) from by
-        exact Function.iterate_succ_apply' _ _ _]
+  -- By Raw.pow_succ, we have `p ^ (n + 1) = p * p ^ n`.
+  rw [show CPolynomial.Raw.pow p (n + 1) = p.mul (CPolynomial.Raw.pow p n) from
+        Raw.pow_succ p n]
   convert commute_pow_self n ( Quotient.mk ( Raw.instSetoidCPolynomial ) p ) using 1
   erw [ Quotient.eq ]
 

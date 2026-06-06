@@ -4,6 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Valerii Huhnin
 -/
 
+import CompPolyTests.Univariate.Eval
+import CompPolyTests.Univariate.Raw
+import CompPolyTests.Univariate.Basic
+import CompPolyTests.Univariate.Linear
+import CompPolyTests.Univariate.ToPoly
 import CompPolyTests.Bivariate.Basic
 import CompPolyTests.Bivariate.Degree
 import CompPolyTests.Bivariate.Factor

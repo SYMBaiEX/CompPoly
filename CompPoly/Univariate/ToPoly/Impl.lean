@@ -55,10 +55,12 @@ theorem eval_toPoly [BEq R] [LawfulBEq R] (x : R) (p : CPolynomial R) :
 theorem Raw.eval₂_toPoly {S : Type*} [Semiring S]
     (f : R →+* S) (x : S) (p : CPolynomial.Raw R) :
     p.eval₂ f x = p.toPoly.eval₂ f x := by
-  unfold CompPoly.CPolynomial.Raw.toPoly CompPoly.CPolynomial.Raw.eval₂
-  rw [← Array.foldl_hom (fun q : R[X] => q.eval₂ f x)
-    (g₁ := fun acc (t : R × ℕ) => acc + Polynomial.C t.1 * Polynomial.X ^ t.2)
-    (g₂ := fun acc (a, i) => acc + f a * x ^ i)]
+  unfold CompPoly.CPolynomial.Raw.toPoly
+  rw [CPolynomial.Raw.eval₂_eq_eval₂_naive, CPolynomial.Raw.eval₂_eq_eval₂_naive]
+  unfold CompPoly.CPolynomial.Raw.eval₂Naive
+  rw [← Array.foldl_hom (fun q : R[X] ↦ q.eval₂ f x)
+    (g₁ := fun acc (t : R × ℕ) ↦ acc + Polynomial.C t.1 * Polynomial.X ^ t.2)
+    (g₂ := fun acc (a, i) ↦ acc + f a * x ^ i)]
   · simp
   · intro acc t
     rcases t with ⟨a, i⟩
@@ -68,9 +70,7 @@ theorem Raw.eval₂_toPoly {S : Type*} [Semiring S]
 theorem eval₂_toPoly {S : Type*} [Semiring S]
     (f : R →+* S) (x : S) (p : CPolynomial R) :
     eval₂ f x p = p.toPoly.eval₂ f x := by
-  simpa [CompPoly.CPolynomial.eval₂, CompPoly.CPolynomial.toPoly, CompPoly.CPolynomial.Raw.eval₂]
-    using
-    (Raw.eval₂_toPoly (f := f) (x := x) (p := p.val))
+  exact Raw.eval₂_toPoly f x p.val
 
 /-- CPolynomial.coeff is correct wrt the Mathlib spec. -/
 theorem coeff_toPoly [BEq R] [LawfulBEq R] (p : CPolynomial R) (i : ℕ) :

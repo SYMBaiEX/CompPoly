@@ -25,11 +25,20 @@ section Semiring
 
 variable {S : Type*}
 
+/-- Naive sum-of-powers evaluation (reference implementation).
+
+  Computes `f(a₀) + f(a₁) * x + f(a₂) * x² + ...` where `aᵢ` are the coefficients.
+  Retained as a specification target for the optimized Horner backend. -/
+def eval₂Naive [Semiring R] [Semiring S] (f : R →+* S) (x : S) (p : CPolynomial.Raw R) : S :=
+  p.zipIdx.foldl (fun acc ⟨a, i⟩ ↦ acc + f a * x ^ i) 0
+
 /-- Evaluates a `CPolynomial.Raw` at `x : S` using a ring homomorphism `f : R →+* S`.
 
-  Computes `f(a₀) + f(a₁) * x + f(a₂) * x² + ...` where `aᵢ` are the coefficients.  -/
+  Uses Horner's method, processing coefficients from high degree to low degree:
+  `f(a₀) + x * (f(a₁) + x * (... + x * f(aₙ)))`, which avoids explicit exponentiation. -/
+@[inline, specialize]
 def eval₂ [Semiring R] [Semiring S] (f : R →+* S) (x : S) (p : CPolynomial.Raw R) : S :=
-  p.zipIdx.foldl (fun acc ⟨a, i⟩ => acc + f a * x ^ i) 0
+  p.foldr (fun a acc ↦ f a + acc * x) 0
 
 /-- Evaluates a `CPolynomial.Raw` at `x : S` using Horner's method.
 
@@ -61,7 +70,7 @@ section SMulDefs
 /-- Scalar multiplication: multiplies each coefficient by `r`. -/
 @[inline, specialize]
 def smul [Mul R] (r : R) (p : CPolynomial.Raw R) : CPolynomial.Raw R :=
-  .mk (Array.map (fun a => r * a) p)
+  .mk (Array.map (fun a ↦ r * a) p)
 
 /-- Right scalar multiplication: multiplies each coefficient by `r` on the right.
 
@@ -74,7 +83,7 @@ def smulRight [Mul R] (r : R) (p : CPolynomial.Raw R) : CPolynomial.Raw R :=
 /-- Raw scalar multiplication by a natural number (may have trailing zeros). -/
 @[inline, specialize]
 def nsmulRaw [Semiring R] (n : ℕ) (p : CPolynomial.Raw R) : CPolynomial.Raw R :=
-  .mk (Array.map (fun a => n * a) p)
+  .mk (Array.map (fun a ↦ n * a) p)
 
 /-- Scalar multiplication of `CPolynomial.Raw` by a natural number, with result trimmed. -/
 @[inline, specialize]
@@ -111,6 +120,7 @@ def mulRaw [Semiring R] (p q : CPolynomial.Raw R) : CPolynomial.Raw R :=
   partial sum (`mulRaw` does the untrimmed accumulation). -/
 @[inline, specialize]
 def mul [Semiring R] [BEq R] (p q : CPolynomial.Raw R) : CPolynomial.Raw R :=
+<<<<<<< HEAD
   (mulRaw p q).trim
 
 /-- Exponentiation of a `CPolynomial.Raw` by a natural number `n` via repeated multiplication.
@@ -143,6 +153,23 @@ at the end, rather than after every squaring step.
 @[inline, specialize]
 def powBySq [Semiring R] [BEq R] (p : CPolynomial.Raw R) (n : Nat) : CPolynomial.Raw R :=
   (powBySqUntrimmed p n).trim
+=======
+  p.zipIdx.foldl (fun acc ⟨a, i⟩ ↦ acc.add <| (smul a q).mulPowX i) (mk #[])
+
+/-- Linear exponentiation of a `CPolynomial.Raw` by repeated multiplication (reference impl). -/
+def powIterate [Semiring R] [BEq R] (p : CPolynomial.Raw R) (n : Nat) : CPolynomial.Raw R :=
+  (mul p)^[n] (C 1)
+
+/-- Exponentiation of a `CPolynomial.Raw` by a natural number `n` via squaring. -/
+@[inline, specialize]
+def pow [Semiring R] [BEq R] (p : CPolynomial.Raw R) : Nat → CPolynomial.Raw R
+  | 0 => C 1
+  | 1 => p.mul (C 1)
+  | n + 2 =>
+    let half := pow p ((n + 2) / 2)
+    let sq := mul half half
+    if (n + 2) % 2 == 0 then sq else mul p sq
+>>>>>>> pr-190
 
 instance : Zero (CPolynomial.Raw R) := ⟨#[]⟩
 instance [One R] : One (CPolynomial.Raw R) := ⟨C 1⟩
@@ -151,7 +178,7 @@ instance [Mul R] : SMul R (CPolynomial.Raw R) := ⟨smul⟩
 instance [Semiring R] [BEq R] : SMul ℕ (CPolynomial.Raw R) := ⟨nsmul⟩
 instance [Semiring R] [BEq R] : Mul (CPolynomial.Raw R) := ⟨mul⟩
 instance [Semiring R] [BEq R] : Pow (CPolynomial.Raw R) Nat := ⟨pow⟩
-instance [NatCast R] : NatCast (CPolynomial.Raw R) := ⟨fun n => C (n : R)⟩
+instance [NatCast R] : NatCast (CPolynomial.Raw R) := ⟨fun n ↦ C (n : R)⟩
 
 /-- Keep only the stored coefficients with index `< k`. -/
 @[inline, specialize]
@@ -205,7 +232,7 @@ section Ring
 
 /-- Negation of a `CPolynomial.Raw`. -/
 @[inline, specialize]
-def neg [Neg R] (p : CPolynomial.Raw R) : CPolynomial.Raw R := p.map (fun a => -a)
+def neg [Neg R] (p : CPolynomial.Raw R) : CPolynomial.Raw R := p.map (fun a ↦ -a)
 
 /-- Subtraction of two `CPolynomial.Raw`s. -/
 @[inline, specialize]
@@ -215,7 +242,7 @@ def sub [Zero R] [Add R] [Neg R] [BEq R]
 
 instance [Neg R] : Neg (CPolynomial.Raw R) := ⟨neg⟩
 instance [Zero R] [Add R] [Neg R] [BEq R] : Sub (CPolynomial.Raw R) := ⟨sub⟩
-instance [IntCast R] : IntCast (CPolynomial.Raw R) := ⟨fun n => C (n : R)⟩
+instance [IntCast R] : IntCast (CPolynomial.Raw R) := ⟨fun n ↦ C (n : R)⟩
 
 end Ring
 
