@@ -20,7 +20,7 @@ namespace CompPoly
 namespace CPolynomial
 namespace NTT
 
-variable {R : Type*} [Field R]
+variable {R : Type*} [Field R] [BEq R] [LawfulBEq R]
 
 open scoped BigOperators
 
