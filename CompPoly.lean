@@ -12,6 +12,7 @@ import CompPoly.Data.ExtTreeMap.ExtDTreeMap
 import CompPoly.Data.ExtTreeMap.ExtTreeMap
 import CompPoly.Data.Fin.BigOperators
 import CompPoly.Data.List.Lemmas
+import CompPoly.Data.MvPolynomial.FirstVarsDegree
 import CompPoly.Data.MvPolynomial.Notation
 import CompPoly.Data.Nat.Bitwise
 import CompPoly.Data.Polynomial.Frobenius
@@ -64,6 +65,7 @@ import CompPoly.Fields.PrattCertificate
 import CompPoly.Fields.Secp256k1
 import CompPoly.Multilinear.Basic
 import CompPoly.Multilinear.Equiv
+import CompPoly.Multilinear.FastSpecEquiv
 import CompPoly.Multilinear.ManyEval
 import CompPoly.Multilinear.ManyEval.Basic
 import CompPoly.Multilinear.ManyEval.Correctness
@@ -93,7 +95,6 @@ import CompPoly.ToMathlib.Polynomial.BivariateWeightedDegree
 import CompPoly.ToMathlib.Polynomial.Div
 import CompPoly.Univariate.Barycentric
 import CompPoly.Univariate.Basic
-import CompPoly.Univariate.Division
 import CompPoly.Univariate.BatchEval
 import CompPoly.Univariate.BatchEval.Context
 import CompPoly.Univariate.BatchEval.Correctness
@@ -101,6 +102,7 @@ import CompPoly.Univariate.BatchEval.Naive
 import CompPoly.Univariate.BatchEval.SubproductTree
 import CompPoly.Univariate.CMvEquiv
 import CompPoly.Univariate.Deriv
+import CompPoly.Univariate.Division
 import CompPoly.Univariate.DivisionCorrectness
 import CompPoly.Univariate.EuclideanAlgorithm
 import CompPoly.Univariate.Lagrange
