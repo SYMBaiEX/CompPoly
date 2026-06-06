@@ -34,17 +34,11 @@ variable {R : Type*}
 
 private lemma root_divByMonic_eq {S : Type*} [CommRing S] [BEq S] [LawfulBEq S] [Nontrivial S]
     (p q : CPolynomial S) :
-    _root_.CompPoly.divByMonic p q = p.divByMonic q := by
-  apply Subtype.ext
-  show (CPolynomial.Raw.divByMonic p.val q.val).trim = CPolynomial.Raw.divByMonic p.val q.val
-  exact CPolynomial.Raw.divByMonic_canonical p.val q.val
+    _root_.CompPoly.divByMonic p q = p.divByMonic q := rfl
 
 private lemma root_modByMonic_eq {S : Type*} [CommRing S] [BEq S] [LawfulBEq S] [Nontrivial S]
     (p q : CPolynomial S) :
-    _root_.CompPoly.modByMonic p q = p.modByMonic q := by
-  apply Subtype.ext
-  show (CPolynomial.Raw.modByMonic p.val q.val).trim = CPolynomial.Raw.modByMonic p.val q.val
-  exact CPolynomial.Raw.modByMonic_canonical (CPolynomial.trim_eq p) q.val
+    _root_.CompPoly.modByMonic p q = p.modByMonic q := rfl
 
 /-- The linear monic divisor `Y - f`, as a bivariate polynomial
 (`CBivariate R = CPolynomial (CPolynomial R)`). -/

@@ -93,17 +93,11 @@ Correctness theorems for `xgcd` with the default threshold 0.
 
 private lemma root_div_eq [Field R] [BEq R] [LawfulBEq R]
     (p q : CPolynomial R) :
-    _root_.CompPoly.div p q = p.div q := by
-  apply Subtype.ext
-  show (CPolynomial.Raw.div p.val q.val).trim = CPolynomial.Raw.div p.val q.val
-  exact CPolynomial.Raw.div_canonical p.val q.val
+    _root_.CompPoly.div p q = p.div q := rfl
 
 private lemma root_mod_eq [Field R] [BEq R] [LawfulBEq R]
     (p q : CPolynomial R) :
-    _root_.CompPoly.mod p q = p.mod q := by
-  apply Subtype.ext
-  show (CPolynomial.Raw.mod p.val q.val).trim = CPolynomial.Raw.mod p.val q.val
-  exact CPolynomial.Raw.mod_canonical (CPolynomial.trim_eq p) q.val
+    _root_.CompPoly.mod p q = p.mod q := rfl
 
 private lemma toPoly_sub_div_mul [Field R] [BEq R] [LawfulBEq R]
     (r r' a b : CPolynomial R) :
@@ -283,12 +277,8 @@ private theorem gcdMonicWithFuel_toPoly_eq_normalize_gcd
       · have hqraw : ¬((q.val : CPolynomial.Raw R) == 0) := by
           intro h
           exact hq (CPolynomial.ext (LawfulBEq.eq_of_beq h))
-        have hmodtrim : (((p.val : CPolynomial.Raw R) % q.val).trim =
-            ((p.val : CPolynomial.Raw R) % q.val)) :=
-          CPolynomial.Raw.mod_canonical (CPolynomial.trim_eq p) q.val
         rw [_root_.CompPoly.gcdMonicWithFuel, CPolynomial.Raw.gcdMonicWithFuel,
           CPolynomial.trim_eq, CPolynomial.trim_eq, if_neg hqraw]
-        rw [← hmodtrim]
         change (_root_.CompPoly.gcdMonicWithFuel fuel q (p % q)).toPoly =
           normalize (EuclideanDomain.gcd p.toPoly q.toPoly)
         rw [ih]
