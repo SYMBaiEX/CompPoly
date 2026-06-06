@@ -218,27 +218,27 @@ theorem smoothCosetLinearFactorsWithSchedule_sound {F : Type*}
   | nil =>
       intro order alpha gamma p factor h
       unfold smoothCosetLinearFactorsWithSchedule at h
-      by_cases hzero : (CPolynomial.monicNormalize p == 0 ||
-          CPolynomial.monicNormalize p == 1) = true
+      by_cases hzero : (_root_.CompPoly.monicNormalize p == 0 ||
+          _root_.CompPoly.monicNormalize p == 1) = true
       · rw [if_pos hzero] at h
         simp at h
       · rw [if_neg hzero] at h
-        by_cases hlin : isRepresentedLinearFactor (CPolynomial.monicNormalize p) = true
+        by_cases hlin : isRepresentedLinearFactor (_root_.CompPoly.monicNormalize p) = true
         · rw [if_pos hlin] at h
           simp at h
           rcases h with rfl
           exact isRepresentedLinearFactor_sound hlin
         · rw [if_neg hlin] at h
-          exact smoothLeafLinearFactors_sound E alpha gamma order (CPolynomial.monicNormalize p) h
+          exact smoothLeafLinearFactors_sound E alpha gamma order (_root_.CompPoly.monicNormalize p) h
   | cons ell rest ih =>
       intro order alpha gamma p factor h
       unfold smoothCosetLinearFactorsWithSchedule at h
-      by_cases hzero : (CPolynomial.monicNormalize p == 0 ||
-          CPolynomial.monicNormalize p == 1) = true
+      by_cases hzero : (_root_.CompPoly.monicNormalize p == 0 ||
+          _root_.CompPoly.monicNormalize p == 1) = true
       · rw [if_pos hzero] at h
         simp at h
       · rw [if_neg hzero] at h
-        by_cases hlin : isRepresentedLinearFactor (CPolynomial.monicNormalize p) = true
+        by_cases hlin : isRepresentedLinearFactor (_root_.CompPoly.monicNormalize p) = true
         · rw [if_pos hlin] at h
           simp at h
           rcases h with rfl
@@ -246,24 +246,24 @@ theorem smoothCosetLinearFactorsWithSchedule_sound {F : Type*}
         · rw [if_neg hlin] at h
           by_cases hellsmall : ell ≤ 1
           · rw [if_pos hellsmall] at h
-            exact ih order alpha gamma (CPolynomial.monicNormalize p) factor h
+            exact ih order alpha gamma (_root_.CompPoly.monicNormalize p) factor h
           · rw [if_neg hellsmall] at h
             by_cases helleq : ell = order
             · rw [if_pos helleq] at h
               exact smoothLeafLinearFactors_sound E alpha gamma order
-                (CPolynomial.monicNormalize p) h
+                (_root_.CompPoly.monicNormalize p) h
             · rw [if_neg helleq] at h
               let childOrder := order / ell
               let tau := gamma ^ childOrder
-              let xPow := xPowModWith M D (CPolynomial.monicNormalize p) childOrder
+              let xPow := xPowModWith M D (_root_.CompPoly.monicNormalize p) childOrder
               have hfold : ∀ (js : List Nat) (acc : Array (CPolynomial F)),
                   (∀ factor, factor ∈ acc.toList → IsLinearFactor factor) →
                     factor ∈ (js.foldl
                       (fun factors j ↦
                         let beta := alpha ^ childOrder * tau ^ j
                         let witness := xPow - CPolynomial.C beta
-                        let child := CPolynomial.monicNormalize
-                          (CPolynomial.gcdMonic (CPolynomial.monicNormalize p) witness)
+                        let child := _root_.CompPoly.monicNormalize
+                          (_root_.CompPoly.gcdMonic (_root_.CompPoly.monicNormalize p) witness)
                         if child == 0 || child == 1 then
                           factors
                         else
@@ -280,8 +280,8 @@ theorem smoothCosetLinearFactorsWithSchedule_sound {F : Type*}
                     simp only [List.foldl_cons] at hmem
                     let beta := alpha ^ childOrder * tau ^ j
                     let witness := xPow - CPolynomial.C beta
-                    let child := CPolynomial.monicNormalize
-                      (CPolynomial.gcdMonic (CPolynomial.monicNormalize p) witness)
+                    let child := _root_.CompPoly.monicNormalize
+                      (_root_.CompPoly.gcdMonic (_root_.CompPoly.monicNormalize p) witness)
                     refine ihjs
                       (if child == 0 || child == 1 then
                           acc
@@ -309,12 +309,12 @@ theorem smoothLinearFactorsAlgorithmWith_sound {F : Type*}
     (h : factor ∈ (smoothLinearFactorsAlgorithmWith M D E q generator schedule p).toList) :
     IsLinearFactor factor := by
   unfold smoothLinearFactorsAlgorithmWith at h
-  by_cases hzero : (CPolynomial.monicNormalize p == 0 ||
-      CPolynomial.monicNormalize p == 1) = true
+  by_cases hzero : (_root_.CompPoly.monicNormalize p == 0 ||
+      _root_.CompPoly.monicNormalize p == 1) = true
   · rw [if_pos hzero] at h
     simp at h
   · rw [if_neg hzero] at h
-    by_cases hconst : (((CPolynomial.monicNormalize p).coeff 0 == 0) = true)
+    by_cases hconst : (((_root_.CompPoly.monicNormalize p).coeff 0 == 0) = true)
     · rw [if_pos hconst] at h
       unfold smoothNonzeroLinearFactorsWith at h
       simp at h
@@ -322,13 +322,13 @@ theorem smoothLinearFactorsAlgorithmWith_sound {F : Type*}
       · rcases hzeroFactor with rfl
         exact linearFactor_isLinearFactor 0
       · exact smoothCosetLinearFactorsWithSchedule_sound M D E schedule.toList (q - 1)
-          1 generator (CPolynomial.monicNormalize (CPolynomial.divX (CPolynomial.monicNormalize p)))
+          1 generator (_root_.CompPoly.monicNormalize (CPolynomial.divX (_root_.CompPoly.monicNormalize p)))
           factor (by simpa using hnonzero)
     · rw [if_neg hconst] at h
       unfold smoothNonzeroLinearFactorsWith at h
       simp at h
       exact smoothCosetLinearFactorsWithSchedule_sound M D E schedule.toList (q - 1)
-        1 generator (CPolynomial.monicNormalize p) factor (by simpa using h)
+        1 generator (_root_.CompPoly.monicNormalize p) factor (by simpa using h)
 
 /-- A smooth coset split maps the residue class `k % ell` to the child-coset equation. -/
 theorem smooth_coset_split_root_partition_mod {F : Type*}
@@ -443,8 +443,8 @@ theorem smooth_schedule_recursion_preserves_coset_invariant {F : Type*}
     (hchild_roots :
       ∀ x : F,
         CPolynomial.eval x
-            (CPolynomial.monicNormalize
-              (CPolynomial.gcdMonic p
+            (_root_.CompPoly.monicNormalize
+              (_root_.CompPoly.gcdMonic p
                 (xPowModWith M D p (order / ell) -
                   CPolynomial.C
                     (alpha ^ (order / ell) * (gamma ^ (order / ell)) ^ j)))) = 0 →
@@ -454,8 +454,8 @@ theorem smooth_schedule_recursion_preserves_coset_invariant {F : Type*}
       (alpha * gamma ^ j)
       (gamma ^ ell)
       (order / ell)
-      (CPolynomial.monicNormalize
-        (CPolynomial.gcdMonic p
+      (_root_.CompPoly.monicNormalize
+        (_root_.CompPoly.gcdMonic p
           (xPowModWith M D p (order / ell) -
             CPolynomial.C (alpha ^ (order / ell) * (gamma ^ (order / ell)) ^ j)))) := by
   exact ⟨hchild_alpha_ne_zero, hchild_order_pos, hchild_generator_order, hchild_roots⟩
@@ -517,7 +517,7 @@ theorem smoothCosetLinearFactorsWithSchedule_complete {F : Type*}
   | nil =>
       intro order alpha gamma p a _hsched _hgamma hp hroot hcoset
       unfold smoothCosetLinearFactorsWithSchedule
-      let p' := CPolynomial.monicNormalize p
+      let p' := _root_.CompPoly.monicNormalize p
       have hp' : p' ≠ 0 := monicNormalize_ne_zero_of_ne_zero hp
       have hroot' : CPolynomial.eval a p' = 0 := (monicNormalize_root_iff hp).2 hroot
       by_cases hzero : (p' == 0 || p' == 1) = true
@@ -538,7 +538,7 @@ theorem smoothCosetLinearFactorsWithSchedule_complete {F : Type*}
   | cons ell rest ih =>
       intro order alpha gamma p a hsched hgamma hp hroot hcoset
       unfold smoothCosetLinearFactorsWithSchedule
-      let p' := CPolynomial.monicNormalize p
+      let p' := _root_.CompPoly.monicNormalize p
       have hp' : p' ≠ 0 := monicNormalize_ne_zero_of_ne_zero hp
       have hroot' : CPolynomial.eval a p' = 0 := (monicNormalize_root_iff hp).2 hroot
       by_cases hzero : (p' == 0 || p' == 1) = true
@@ -606,7 +606,7 @@ theorem smoothCosetLinearFactorsWithSchedule_complete {F : Type*}
                           ring
               let beta := alpha ^ childOrder * tau ^ j
               let witness := xPow - CPolynomial.C beta
-              let child := CPolynomial.monicNormalize (CPolynomial.gcdMonic p' witness)
+              let child := _root_.CompPoly.monicNormalize (_root_.CompPoly.gcdMonic p' witness)
               have hpoweq : a ^ childOrder = beta := by
                 rw [haeq]
                 dsimp [beta, tau, j, childOrder]
@@ -615,9 +615,9 @@ theorem smoothCosetLinearFactorsWithSchedule_complete {F : Type*}
                 dsimp [witness, xPow, beta]
                 rw [eval_sub, eval_xPowModWith_eq_pow M D hroot' childOrder, eval_C, hpoweq]
                 ring
-              have hgcdRoot : CPolynomial.eval a (CPolynomial.gcdMonic p' witness) = 0 :=
+              have hgcdRoot : CPolynomial.eval a (_root_.CompPoly.gcdMonic p' witness) = 0 :=
                 gcdMonic_root_of_left_right hroot' hwitnessRoot
-              have hgcdNe : CPolynomial.gcdMonic p' witness ≠ 0 :=
+              have hgcdNe : _root_.CompPoly.gcdMonic p' witness ≠ 0 :=
                 gcdMonic_ne_zero_of_left hp'
               have hchildNe : child ≠ 0 := monicNormalize_ne_zero_of_ne_zero hgcdNe
               have hchildRoot : CPolynomial.eval a child = 0 :=
@@ -644,7 +644,7 @@ theorem smoothCosetLinearFactorsWithSchedule_complete {F : Type*}
                         (fun factors y ↦
                           let beta := alpha ^ childOrder * tau ^ y
                           let witness := xPow - CPolynomial.C beta
-                          let child := CPolynomial.monicNormalize (CPolynomial.gcdMonic p' witness)
+                          let child := _root_.CompPoly.monicNormalize (_root_.CompPoly.gcdMonic p' witness)
                           if child == 0 || child == 1 then
                             factors
                           else
@@ -666,17 +666,17 @@ theorem smoothCosetLinearFactorsWithSchedule_complete {F : Type*}
                     · left
                       rcases hacc with ⟨factor, hmem, hcand⟩
                       refine ⟨factor, ?_, hcand⟩
-                      by_cases hskipY : (CPolynomial.monicNormalize
-                          (CPolynomial.gcdMonic p'
+                      by_cases hskipY : (_root_.CompPoly.monicNormalize
+                          (_root_.CompPoly.gcdMonic p'
                             (xPow - CPolynomial.C (alpha ^ childOrder * tau ^ y))) == 0 ||
-                          CPolynomial.monicNormalize
-                            (CPolynomial.gcdMonic p'
+                          _root_.CompPoly.monicNormalize
+                            (_root_.CompPoly.gcdMonic p'
                               (xPow - CPolynomial.C (alpha ^ childOrder * tau ^ y))) == 1) = true
                       · rw [if_pos hskipY]
                         exact hmem
                       · rw [if_neg hskipY]
-                        let childY := CPolynomial.monicNormalize
-                          (CPolynomial.gcdMonic p'
+                        let childY := _root_.CompPoly.monicNormalize
+                          (_root_.CompPoly.gcdMonic p'
                             (xPow - CPolynomial.C (alpha ^ childOrder * tau ^ y)))
                         let tail := smoothCosetLinearFactorsWithSchedule M D E rest childOrder
                           (alpha * gamma ^ y) (gamma ^ ell) childY
@@ -709,7 +709,7 @@ theorem smoothLinearFactorsAlgorithmWith_complete {F : Type*}
       factor ∈ (smoothLinearFactorsAlgorithmWith M D E q generator schedule p).toList ∧
         IsLinearRootFactorCandidate factor a := by
   unfold smoothLinearFactorsAlgorithmWith
-  let p' := CPolynomial.monicNormalize p
+  let p' := _root_.CompPoly.monicNormalize p
   have hp' : p' ≠ 0 := monicNormalize_ne_zero_of_ne_zero hp
   have hroot' : CPolynomial.eval a p' = 0 := (monicNormalize_root_iff hp).2 hroot
   by_cases hzero : (p' == 0 || p' == 1) = true
@@ -746,12 +746,12 @@ theorem smoothLinearFactorsAlgorithmWith_complete {F : Type*}
         have hdivNe : CPolynomial.divX p' ≠ 0 :=
           divX_ne_zero_of_ne_zero_coeff_zero hp' hcoeff
         have hchildRoot :
-            CPolynomial.eval a (CPolynomial.monicNormalize (CPolynomial.divX p')) = 0 :=
+            CPolynomial.eval a (_root_.CompPoly.monicNormalize (CPolynomial.divX p')) = 0 :=
           (monicNormalize_root_iff hdivNe).2 hdivRoot
-        have hchildNe : CPolynomial.monicNormalize (CPolynomial.divX p') ≠ 0 :=
+        have hchildNe : _root_.CompPoly.monicNormalize (CPolynomial.divX p') ≠ 0 :=
           monicNormalize_ne_zero_of_ne_zero hdivNe
         rcases smoothCosetLinearFactorsWithSchedule_complete M D E schedule.toList (q - 1)
-            (1 : F) generator (CPolynomial.monicNormalize (CPolynomial.divX p')) a
+            (1 : F) generator (_root_.CompPoly.monicNormalize (CPolynomial.divX p')) a
             hschedule hgenPow hchildNe hchildRoot hcoset with ⟨factor, hmem, hcand⟩
         refine ⟨factor, ?_, hcand⟩
         unfold smoothNonzeroLinearFactorsWith
