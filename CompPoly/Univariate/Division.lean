@@ -71,6 +71,19 @@ theorem mod_zero (p : CPolynomial R) : p.mod 0 = 0 := by
   rw [Raw.mul_zero, Raw.leadingCoeff_zero, inv_zero]
   rw [smul_eq_mul, Raw.C_mul_eq_smul_trim, Raw.smul_zero_trim]; rfl
 
+/-- Normalize a nonzero polynomial to monic form. The zero polynomial stays zero. -/
+def monicNormalize (p : CPolynomial R) : CPolynomial R :=
+  CPolynomial.ofArray (Raw.monicNormalize p.val)
+
+/-- Euclidean gcd with explicit fuel, normalized to a monic result. -/
+def gcdMonicWithFuel :
+    Nat → CPolynomial R → CPolynomial R → CPolynomial R
+  | fuel, p, q => CPolynomial.ofArray (Raw.gcdMonicWithFuel fuel p.val q.val)
+
+/-- Monic Euclidean gcd for canonical univariate polynomials. -/
+def gcdMonic (p q : CPolynomial R) : CPolynomial R :=
+  CPolynomial.ofArray (Raw.gcdMonic p.val q.val)
+
 end Division
 
 section ImplementationCorrectness

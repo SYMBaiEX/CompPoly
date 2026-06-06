@@ -13,6 +13,15 @@ import CompPolyTests.Bivariate.Basic
 import CompPolyTests.Bivariate.Degree
 import CompPolyTests.Bivariate.Factor
 import CompPolyTests.Bivariate.Deriv
+import CompPolyTests.Bivariate.GuruswamiSudan.Compose
+import CompPolyTests.Bivariate.GuruswamiSudan.Core
+import CompPolyTests.Bivariate.GuruswamiSudan.Filter
+import CompPolyTests.Bivariate.GuruswamiSudan.Hasse
+import CompPolyTests.Bivariate.GuruswamiSudan.Interpolation.Dense
+import CompPolyTests.Bivariate.GuruswamiSudan.Interpolation.Koetter
+import CompPolyTests.Bivariate.GuruswamiSudan.Interpolation.LeeOSullivan
+import CompPolyTests.Bivariate.GuruswamiSudan.Root.FieldRoots.KoalaBear
+import CompPolyTests.Bivariate.GuruswamiSudan.Root.RothRuckenstein
 import CompPolyTests.Bivariate.Multiplicity
 import CompPolyTests.Bivariate.WeightedDegree
 import CompPolyTests.Data.MvPolynomial.Notation
@@ -20,6 +29,7 @@ import CompPolyTests.Fields.Binary.AdditiveNTT.NovelPolynomialBasis
 import CompPolyTests.Fields.Binary.BF128Ghash.Prelude
 import CompPolyTests.Fields.KoalaBear.Fast
 import CompPolyTests.Fields.PrattCertificate
+import CompPolyTests.LinearAlgebra.Dense
 import CompPolyTests.Multilinear.Equiv
 import CompPolyTests.Multilinear.FastSpecEquiv
 import CompPolyTests.Multivariate.CMvMonomial
@@ -34,4 +44,6 @@ import CompPolyTests.Univariate.NTT.FastMul
 import CompPolyTests.Univariate.NTT.Forward
 import CompPolyTests.Univariate.NTT.Inverse
 import CompPolyTests.Univariate.Raw
+import CompPolyTests.Univariate.Roots.FiniteField
+import CompPolyTests.Univariate.Roots.Shoup
 import CompPolyTests.Univariate.ToPoly
