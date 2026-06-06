@@ -171,8 +171,6 @@ import CompPoly.ToMathlib.Polynomial.BivariateWeightedDegree
 import CompPoly.ToMathlib.Polynomial.Div
 import CompPoly.Univariate.Barycentric
 import CompPoly.Univariate.Basic
-import CompPoly.Univariate.Basic
-import CompPoly.Univariate.Basic
 import CompPoly.Univariate.BatchEval
 import CompPoly.Univariate.BatchEval.Context
 import CompPoly.Univariate.BatchEval.Correctness
@@ -242,7 +240,5 @@ import CompPoly.Univariate.ToPoly
 import CompPoly.Univariate.ToPoly.Core
 import CompPoly.Univariate.ToPoly.Degree
 import CompPoly.Univariate.ToPoly.Equiv
-import CompPoly.Univariate.ToPoly.Impl
-import CompPoly.Univariate.ToPoly.Impl
 import CompPoly.Univariate.ToPoly.Impl
 import CompPoly.Univariate.Vanishing
