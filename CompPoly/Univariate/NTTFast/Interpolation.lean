@@ -17,7 +17,7 @@ namespace CompPoly
 namespace CPolynomial
 namespace NTTFast
 
-variable {R : Type*} [Field R]
+variable {R : Type*} [Field R] [BEq R] [LawfulBEq R]
 
 namespace Plan
 
