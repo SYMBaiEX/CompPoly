@@ -180,7 +180,8 @@ theorem finiteFieldRootProductWith_toPoly_eq_normalize_gcd {F : Type*}
   have hwitnessTrim : witnessRaw.trim = witnessRaw := by
     dsimp [witnessRaw]
     exact raw_xPowSubXModWith_trim M D ctx.q (CPolynomial.monicNormalize p).val
-  simpa [CPolynomial.gcdMonic, CPolynomial.ofArray, witnessRaw, hwitnessTrim] using
+  simpa [CPolynomial.gcdMonic, CPolynomial.ofArray, witnessRaw, hwitnessTrim,
+    raw_xPowSubXModWith_trim] using
     CPolynomial.gcdMonic_toPoly_eq_normalize_gcd
       (CPolynomial.monicNormalize p) (CPolynomial.ofArray witnessRaw)
 

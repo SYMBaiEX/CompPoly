@@ -115,7 +115,7 @@ private theorem Raw.eval_mul {F : Type*} [Field F] [BEq F] [LawfulBEq F]
     Polynomial.eval_mul, CPolynomial.Raw.eval_toPoly_eq_eval,
     CPolynomial.Raw.eval_toPoly_eq_eval]
 
-private theorem Raw.eval_C {F : Type*} [Field F] (a c : F) :
+private theorem Raw.eval_C {F : Type*} [Field F] [BEq F] [LawfulBEq F] (a c : F) :
     (CPolynomial.Raw.C c).eval a = c := by
   rw [← CPolynomial.Raw.eval_toPoly_eq_eval]
   simp [CPolynomial.Raw.toPoly_C]
@@ -148,10 +148,9 @@ private theorem Raw.eval_mod_eq_zero_of_left_right {F : Type*}
     rw [Raw.eval_mul, Raw.eval_C, hq]
     simp
   have hmod := CPolynomial.Raw.eval_modByMonic_eq_self_of_eval_eq_zero
-    (CPolynomial.Raw.C (q.leadingCoeff)⁻¹ • p)
+    p
     (CPolynomial.Raw.C (q.leadingCoeff)⁻¹ * q) hqscaled
-  rw [hmod, Raw.eval_C_smul, hp]
-  simp
+  rw [hmod, hp]
 
 private theorem Raw.eval_gcdMonicWithFuel_eq_zero_of_left_right {F : Type*}
     [Field F] [BEq F] [LawfulBEq F] {a : F} :
@@ -325,7 +324,8 @@ theorem linearRootOfFactor?_sound {F : Type*} [Field F] [BEq F] [LawfulBEq F]
       | cons y xs =>
           cases xs with
           | nil =>
-              simp [linearRootOfFactor?, CPolynomial.eval] at h ⊢
+              simp [linearRootOfFactor?, CPolynomial.eval,
+                CPolynomial.Raw.eval, CPolynomial.Raw.eval₂] at h ⊢
               rcases h with ⟨hy, ha⟩
               rw [← ha]
               field_simp [hy]
@@ -465,12 +465,12 @@ private theorem raw_eval_powModBinaryAux_naive {F : Type*}
               omega
             simp [hpow]
 
-private theorem raw_eval_one {F : Type*} [Field F] (a : F) :
+private theorem raw_eval_one {F : Type*} [Field F] [BEq F] [LawfulBEq F] (a : F) :
     (1 : CPolynomial.Raw F).eval a = 1 := by
   rw [← CPolynomial.Raw.eval_toPoly_eq_eval]
   simp
 
-private theorem raw_eval_X {F : Type*} [Field F] (a : F) :
+private theorem raw_eval_X {F : Type*} [Field F] [BEq F] [LawfulBEq F] (a : F) :
     (CPolynomial.Raw.X : CPolynomial.Raw F).eval a = a := by
   rw [← CPolynomial.Raw.eval_toPoly_eq_eval]
   simp [CPolynomial.Raw.toPoly_X]
@@ -800,7 +800,7 @@ private theorem eq_zero_of_size_le_one_root {F : Type*}
   | cons x xs =>
       cases xs with
       | nil =>
-          simp [CPolynomial.eval] at hroot
+          simp [CPolynomial.eval, CPolynomial.Raw.eval, CPolynomial.Raw.eval₂] at hroot
           have hxne := hcanon (by simp)
           simp [Array.getLast] at hxne
           exact (hxne hroot).elim
@@ -825,6 +825,7 @@ private theorem linear_candidate_self_of_size_two_root {F : Type*}
           cases xs with
           | nil =>
               simp [IsLinearRootFactorCandidate, IsLinearFactor, CPolynomial.eval,
+                CPolynomial.Raw.eval, CPolynomial.Raw.eval₂,
                 CPolynomial.coeff, CPolynomial.Raw.coeff] at hroot hcoeff ⊢
               exact ⟨hcoeff, hroot⟩
           | cons _ _ =>
@@ -887,7 +888,8 @@ theorem representedLinearFactor_candidate_of_root {F : Type*}
           cases xs with
           | nil =>
               simp [isRepresentedLinearFactor, IsLinearRootFactorCandidate, IsLinearFactor,
-                CPolynomial.eval, CPolynomial.coeff, CPolynomial.Raw.coeff] at hroot hlin ⊢
+                CPolynomial.eval, CPolynomial.Raw.eval, CPolynomial.Raw.eval₂,
+                CPolynomial.coeff, CPolynomial.Raw.coeff] at hroot hlin ⊢
               exact ⟨hlin, hroot⟩
           | cons _ _ =>
               simp [isRepresentedLinearFactor] at hlin

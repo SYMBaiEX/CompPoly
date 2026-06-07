@@ -234,7 +234,7 @@ theorem trim_toImpl [LawfulBEq R] (p : R[X]) : p.toImpl.trim = p.toImpl := by
 
 /-- The round-trip from `CPolynomial.Raw` to `Polynomial` and back yields the canonical form. -/
 @[simp, grind =]
-theorem Raw.toImpl_toPoly [LawfulBEq R] (p : CPolynomial.Raw R) : p.toPoly.toImpl = p.trim := by
+theorem toImpl_toPoly [LawfulBEq R] (p : CPolynomial.Raw R) : p.toPoly.toImpl = p.trim := by
   have h_inj : ∀ a b : CPolynomial.Raw R, IsCanonical a → IsCanonical b → a.toPoly = b.toPoly → a = b := by
     intro a b ha hb hab
     apply Trim.canonical_ext (Trim.trim_eq_of_isCanonical ha) (Trim.trim_eq_of_isCanonical hb)
@@ -248,7 +248,7 @@ theorem Raw.toImpl_toPoly [LawfulBEq R] (p : CPolynomial.Raw R) : p.toPoly.toImp
   exact h_inj _ _ h_canonical_toImpl h_canonical_trim h_eq_both
 
 /-- A nonempty trimmed raw polynomial bounds the degree of its `toPoly` image. -/
-theorem Raw.toPoly_natDegree_lt_trim_size_of_pos [LawfulBEq R]
+theorem toPoly_natDegree_lt_trim_size_of_pos [LawfulBEq R]
     (p : CPolynomial.Raw R) (hp : 0 < p.trim.size) :
     p.toPoly.natDegree < p.trim.size := by
   have hround := Raw.toImpl_toPoly (R := R) p

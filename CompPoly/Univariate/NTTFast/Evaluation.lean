@@ -26,7 +26,7 @@ namespace Plan
 A well-formed planned forward transform evaluates the raw polynomial on the NTT
 domain, returning the values in bit-reversed order.
 -/
-theorem forwardImpl_eq_bitRevPermute_evalOnDomain
+theorem forwardImpl_eq_bitRevPermute_evalOnDomain [BEq R] [LawfulBEq R]
     (P : Plan R) (hP : WellFormed P) (p : CPolynomial.Raw R)
     (hdeg : p.toPoly.natDegree < P.domain.n) :
     forwardImpl P p =

@@ -74,4 +74,11 @@ abbrev gcdMonic (p q : CPolynomial R) : CPolynomial R :=
 
 end Division
 
+-- Re-export the field-level monic-normalization and gcd wrappers into the
+-- `CPolynomial` namespace, where the correctness theorems and downstream callers
+-- (`Roots/`, `NTTFast/`) reference them.
+namespace CPolynomial
+export CompPoly (monicNormalize gcdMonicWithFuel gcdMonic)
+end CPolynomial
+
 end CompPoly
