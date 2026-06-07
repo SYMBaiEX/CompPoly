@@ -1068,7 +1068,7 @@ private theorem raw_monicNormalize_toPoly_eq_normalize {F : Type*}
     (CPolynomial.ofArray (CPolynomial.Raw.monicNormalize p)).toPoly =
       normalize (CPolynomial.ofArray p).toPoly := by
   have h := CPolynomial.monicNormalize_toPoly_eq_normalize (CPolynomial.ofArray p)
-  unfold CPolynomial.monicNormalize at h
+  unfold _root_.CompPoly.monicNormalize at h
   unfold CPolynomial.ofArray at h
   rw [raw_monicNormalize_trim_arg] at h
   exact h

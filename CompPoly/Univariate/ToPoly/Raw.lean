@@ -247,6 +247,11 @@ theorem Raw.toImpl_toPoly [LawfulBEq R] (p : CPolynomial.Raw R) : p.toPoly.toImp
   have h_eq_both : p.toPoly.toImpl.toPoly = p.trim.toPoly := by rw [← h_eq, h_eq']
   exact h_inj _ _ h_canonical_toImpl h_canonical_trim h_eq_both
 
+/-- Compatibility alias for the non-duplicated `CPolynomial.Raw` namespace. -/
+@[simp, grind =]
+theorem toImpl_toPoly [LawfulBEq R] (p : CPolynomial.Raw R) : p.toPoly.toImpl = p.trim := by
+  exact _root_.CompPoly.CPolynomial.Raw.Raw.toImpl_toPoly p
+
 /-- A nonempty trimmed raw polynomial bounds the degree of its `toPoly` image. -/
 theorem Raw.toPoly_natDegree_lt_trim_size_of_pos [LawfulBEq R]
     (p : CPolynomial.Raw R) (hp : 0 < p.trim.size) :
@@ -261,6 +266,12 @@ theorem Raw.toPoly_natDegree_lt_trim_size_of_pos [LawfulBEq R]
   · have himpl_size : p.toPoly.toImpl.size = p.toPoly.natDegree + 1 := by
       simp [himpl]
     omega
+
+/-- Compatibility alias for the non-duplicated `CPolynomial.Raw` namespace. -/
+theorem toPoly_natDegree_lt_trim_size_of_pos [LawfulBEq R]
+    (p : CPolynomial.Raw R) (hp : 0 < p.trim.size) :
+    p.toPoly.natDegree < p.trim.size := by
+  exact _root_.CompPoly.CPolynomial.Raw.Raw.toPoly_natDegree_lt_trim_size_of_pos p hp
 
 /-- Evaluation is preserved by `toImpl`. -/
 @[simp, grind =]

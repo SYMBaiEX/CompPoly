@@ -74,4 +74,26 @@ abbrev gcdMonic (p q : CPolynomial R) : CPolynomial R :=
 
 end Division
 
+namespace CPolynomial
+
+section DivisionAliases
+
+variable {R : Type*} [Field R] [BEq R] [LawfulBEq R]
+
+/-- Compatibility alias for roots modules that use the `CPolynomial` namespace. -/
+abbrev monicNormalize (p : CPolynomial R) : CPolynomial R :=
+  CPolynomial.ofArray (Raw.monicNormalize p.val)
+
+/-- Compatibility alias for roots modules that use the `CPolynomial` namespace. -/
+abbrev gcdMonicWithFuel (fuel : Nat) (p q : CPolynomial R) : CPolynomial R :=
+  CPolynomial.ofArray (Raw.gcdMonicWithFuel fuel p.val q.val)
+
+/-- Compatibility alias for roots modules that use the `CPolynomial` namespace. -/
+abbrev gcdMonic (p q : CPolynomial R) : CPolynomial R :=
+  CPolynomial.ofArray (Raw.gcdMonic p.val q.val)
+
+end DivisionAliases
+
+end CPolynomial
+
 end CompPoly
